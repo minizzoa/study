@@ -10,7 +10,6 @@
         :root { --primary: #FFD93D; --secondary: #6C63FF; --success: #22c55e; --error: #ef4444; --text: #2D3436; }
         body { font-family: 'Pretendard', sans-serif; background: var(--secondary); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
         
-        /* 메인 컨테이너 */
         #app { background: white; width: 90%; max-width: 450px; padding: 25px 20px; border-radius: 30px; box-shadow: 0 20px 0 rgba(0,0,0,0.2); text-align: center; position: relative; }
         
         .main-title { font-size: 2.2rem; font-weight: 900; color: var(--secondary); margin-bottom: 5px; letter-spacing: -1px; }
@@ -36,16 +35,20 @@
         .btn-pass { background: #dfe6e9; color: #636e72; box-shadow: 0 5px 0 #b2bec3; }
         .btn:active { transform: translateY(3px); box-shadow: none; }
 
-        #perfect-screen { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(108, 99, 255, 0.95); 
-                           color: white; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; }
+        /* 결과 화면 스타일 수정 */
+        #perfect-screen { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(108, 99, 255, 0.98); 
+                           color: white; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
+        
+        /* 다시 시작하기 버튼 세로 길이 단축 */
+        .btn-restart { padding: 10px 25px !important; font-size: 1rem !important; border-radius: 10px !important; margin-top: 20px; width: auto !important; flex: none !important; }
     </style>
 </head>
 <body>
 
 <div id="perfect-screen">
-    <h1 style="font-size: 4rem;">PERFECT! 🏆</h1>
-    <p style="font-size: 1.5rem;">오늘의 단어를 모두 정복했습니다!</p>
-    <button class="btn btn-main" onclick="location.reload()" style="margin-top: 20px; max-width: 200px;">다시 시작하기</button>
+    <h1 style="font-size: 3.5rem; margin-bottom: 10px;">PERFECT! 🏆</h1>
+    <p style="font-size: 1.3rem; margin-bottom: 5px;">오늘의 단어를 모두 정복했습니다!</p>
+    <button class="btn btn-main btn-restart" onclick="location.reload()">다시 시작하기</button>
 </div>
 
 <div id="app">
@@ -71,8 +74,8 @@
     <input type="text" id="user-input" placeholder="정답을 입력하세요!" autocomplete="off">
     
     <div class="btn-group">
-        <button class="btn btn-pass" id="pass-btn" onclick="passQuestion()">모르겠어요</button>
-        <button class="btn btn-main" id="check-btn" onclick="checkAnswer()">확인</button>
+        <button class="btn btn-pass" onclick="passQuestion()">모르겠어요</button>
+        <button class="btn btn-main" onclick="checkAnswer()">확인</button>
     </div>
 </div>
 
@@ -98,7 +101,7 @@
             if (!isPaused) {
                 timeLeft--;
                 updateTimerBar();
-                if (timeLeft % 5 === 0) playTickSound();
+                if (timeLeft % 10 === 0) playTickSound();
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     handleWrongProcess('⏰ 시간초과!');
@@ -111,7 +114,6 @@
         document.getElementById('timer-bar').style.width = (timeLeft / 60) * 100 + "%";
     }
 
-    // [중요] 오답/패스/시간초과 시 공통 처리 함수
     function handleWrongProcess(msg) {
         clearInterval(timerInterval);
         playWrongSound();
@@ -122,9 +124,8 @@
         
         const inputEl = document.getElementById('user-input');
         inputEl.value = `정답: ${correctAnswer}`;
-        inputEl.disabled = true; // 잠시 입력 방지
+        inputEl.disabled = true;
         
-        // 1.5초 후 다음 문제로
         setTimeout(nextQuestion, 1500);
     }
 
@@ -135,8 +136,6 @@
         }
         clearInterval(timerInterval);
         document.getElementById('feedback-area').innerText = '';
-        
-        // 랜덤 단어 선택
         currentIndex = Math.floor(Math.random() * wordData.length);
         quizMode = Math.random() > 0.5 ? 'ENG_TO_KOR' : 'KOR_TO_ENG';
         
@@ -177,10 +176,23 @@
         handleWrongProcess('PASS ⏩');
     }
 
+    // --- 성공 연출 ---
     function showPerfect() {
         clearInterval(timerInterval);
         document.getElementById('perfect-screen').style.display = 'flex';
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        
+        // 1. 폭죽 애니메이션
+        const duration = 3 * 1000;
+        const end = Date.now() + duration;
+
+        (function frame() {
+            confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 } });
+            confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 } });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+
+        // 2. 승리 사운드 (팡파르)
+        playVictorySound();
     }
 
     function triggerFeedback(text, color) {
@@ -192,7 +204,7 @@
         }
     }
 
-    // --- 사운드 ---
+    // --- 사운드 함수 ---
     function playTone(freq, vol, duration, type = 'sine') {
         if(!soundEnabled) return;
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -206,15 +218,23 @@
         osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
 
+    function playVictorySound() {
+        if(!soundEnabled) return;
+        // 도-미-솔-도 팡파르
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 0.1, 0.5, 'triangle'), i * 150);
+        });
+    }
+
     function playTickSound() {
         if(!soundEnabled) return;
-        const freq = 400 + (60 - timeLeft) * 5;
-        playTone(freq, 0.03, 0.05, 'triangle');
+        playTone(600, 0.02, 0.05, 'sine');
     }
 
     function playWrongSound() {
         if(!soundEnabled) return;
-        playTone(180, 0.2, 0.3, 'sawtooth');
+        playTone(180, 0.1, 0.3, 'sawtooth');
     }
 
     document.getElementById('sound-toggle').onclick = function() {
