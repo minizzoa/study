@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하루 단어 ⚡ 중학 영단어 마스터</title>
+    <script src="word_list.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --primary: #FFD93D; --secondary: #6C63FF; --success: #22c55e; --error: #ef4444; --text: #2D3436; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--secondary); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        
+        /* 메인 컨테이너 */
+        #app { background: white; width: 90%; max-width: 450px; padding: 25px 20px; border-radius: 30px; box-shadow: 0 20px 0 rgba(0,0,0,0.2); text-align: center; position: relative; }
+        
+        /* 수정된 제목 스타일 */
+        .main-title { font-size: 2.2rem; font-weight: 900; color: var(--secondary); margin-bottom: 5px; letter-spacing: -1px; }
+        .sub-title { font-size: 0.9rem; color: #888; margin-bottom: 20px; font-weight: 500; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .stats { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 15px; margin-bottom: 15px; font-weight: bold; }
+        
+        .timer-container { width: 100%; height: 12px; background: #eee; border-radius: 6px; margin-bottom: 15px; overflow: hidden; }
+        #timer-bar { width: 100%; height: 100%; background: var(--error); transition: width 0.1s linear; }
+
+        .word-box { font-size: 2.8rem; font-weight: 800; margin-top: 5px; color: var(--secondary); min-height: 70px; display: flex; align-items: center; justify-content: center; }
+        
+        #feedback-area { height: 50px; font-size: 1.8rem; font-weight: 900; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
+
+        input { width: 85%; padding: 15px; border: 3px solid #EEE; border-radius: 15px; font-size: 1.2rem; text-align: center; outline: none; margin-bottom: 15px; transition: 0.2s; }
+        input:focus { border-color: var(--secondary); }
+        
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        .btn { border: none; padding: 15px 25px; border-radius: 15px; cursor: pointer; font-size: 1.1rem; font-weight: bold; flex: 1; transition: 0.2s; }
+        .btn-main { background: var(--primary); color: var(--text); box-shadow: 0 5px 0 #E6C235; }
+        .btn-pass { background: #dfe6e9; color: #636e72; box-shadow: 0 5px 0 #b2bec3; }
+        .btn:active { transform: translateY(3px); box-shadow: none; }
+
+        #perfect-screen { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(108, 99, 255, 0.95); 
+                           color: white; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; }
+    </style>
+</head>
+<body>
+
+<div id="perfect-screen">
+    <h1 style="font-size: 4rem;">PERFECT! 🏆</h1>
+    <p style="font-size: 1.5rem;">오늘의 단어를 모두 정복했습니다!</p>
+    <button class="btn btn-main" onclick="location.reload()" style="margin-top: 20px; max-width: 200px;">다시 시작하기</button>
+</div>
+
+<div id="app">
+    <div class="main-title">📚 하루 단어</div>
+    <div class="sub-title">매일 매일 똑똑해지는 습관</div>
+
+    <div class="header">
+        <span id="sound-toggle" style="cursor:pointer; font-size: 1.5rem;">🔊</span>
+        <span id="pause-btn" style="cursor:pointer; font-size: 1.5rem;">⏸</span>
+    </div>
+
+    <div class="stats">
+        <span>내 점수: <span id="score" style="color:var(--secondary)">0</span></span>
+        <span id="mode-display" style="color:#636e72">준비</span>
+    </div>
+
+    <div class="timer-container"><div id="timer-bar"></div></div>
+
+    <div class="word-box" id="question-text">...</div>
+    
+    <div id="feedback-area"></div>
+    
+    <input type="text" id="user-input" placeholder="정답을 입력하세요!" autocomplete="off">
+    
+    <div class="btn-group">
+        <button class="btn btn-pass" onclick="passQuestion()">모르겠어요</button>
+        <button class="btn btn-main" onclick="checkAnswer()">확인</button>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let currentIndex = 0;
+    let soundEnabled = true;
+    let isPaused = false;
+    let quizMode = 'ENG_TO_KOR';
+    let timeLeft = 60; 
+    let timerInterval;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    window.onload = () => {
+        if(typeof wordData !== 'undefined') nextQuestion();
+    };
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 60;
+        updateTimerBar();
+        timerInterval = setInterval(() => {
+            if (!isPaused) {
+                timeLeft--;
+                updateTimerBar();
+                if (timeLeft % 5 === 0) playTickSound(); // 째깍 사운드
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeOut();
+                }
+            }
+        }, 100);
+    }
+
+    function updateTimerBar() {
+        document.getElementById('timer-bar').style.width = (timeLeft / 60) * 100 + "%";
+    }
+
+    function handleTimeOut() {
+        playWrongSound();
+        triggerFeedback('⏰ 시간초과!', 'var(--error)');
+        const currentWord = wordData[currentIndex];
+        const correctAnswer = quizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
+        document.getElementById('user-input').value = `정답: ${correctAnswer}`;
+        document.getElementById('user-input').disabled = true;
+        setTimeout(nextQuestion, 1800);
+    }
+
+    function nextQuestion() {
+        if (score >= 100) {
+            showPerfect();
+            return;
+        }
+        clearInterval(timerInterval);
+        document.getElementById('feedback-area').innerText = '';
+        currentIndex = Math.floor(Math.random() * wordData.length);
+        quizMode = Math.random() > 0.5 ? 'ENG_TO_KOR' : 'KOR_TO_ENG';
+        
+        const currentWord = wordData[currentIndex];
+        document.getElementById('mode-display').innerText = quizMode === 'ENG_TO_KOR' ? '영어 → 뜻' : '뜻 → 영어';
+        document.getElementById('question-text').innerText = quizMode === 'ENG_TO_KOR' ? currentWord.english : currentWord.meaning;
+        document.getElementById('user-input').value = '';
+        document.getElementById('user-input').disabled = false;
+        document.getElementById('user-input').focus();
+        startTimer();
+    }
+
+    function checkAnswer() {
+        if (isPaused || timeLeft <= 0) return;
+        const userInput = document.getElementById('user-input').value.trim().toLowerCase();
+        const currentWord = wordData[currentIndex];
+        
+        const answerRaw = quizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
+        const correctAnswers = answerRaw.split(',').map(s => s.trim().toLowerCase());
+
+        if (correctAnswers.includes(userInput)) {
+            clearInterval(timerInterval);
+            score += 10;
+            document.getElementById('score').innerText = score;
+            triggerFeedback('⭕ 정답입니다!', 'var(--success)');
+            playTone(523, 0.1, 0.1, 'sine');
+            setTimeout(() => playTone(659, 0.1, 0.2, 'sine'), 100);
+            setTimeout(nextQuestion, 800);
+        } else {
+            playWrongSound();
+            triggerFeedback('❌ 틀렸어요!', 'var(--error)');
+        }
+    }
+
+    function passQuestion() {
+        clearInterval(timerInterval);
+        triggerFeedback('PASS ⏩', '#636e72');
+        setTimeout(nextQuestion, 500);
+    }
+
+    function showPerfect() {
+        clearInterval(timerInterval);
+        document.getElementById('perfect-screen').style.display = 'flex';
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    }
+
+    function triggerFeedback(text, color) {
+        const area = document.getElementById('feedback-area');
+        area.innerText = text;
+        area.style.color = color;
+        if(color.includes('error')) {
+            area.animate([{ transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }], { duration: 50, iterations: 4 });
+        }
+    }
+
+    // --- 사운드 ---
+    function playTone(freq, vol, duration, type = 'sine') {
+        if(!soundEnabled) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playTickSound() {
+        if(!soundEnabled) return;
+        const freq = 400 + (60 - timeLeft) * 5;
+        playTone(freq, 0.03, 0.05, 'triangle');
+    }
+
+    function playWrongSound() {
+        if(!soundEnabled) return;
+        playTone(180, 0.2, 0.3, 'sawtooth');
+        playTone(140, 0.2, 0.3, 'square');
+    }
+
+    document.getElementById('sound-toggle').onclick = function() {
+        soundEnabled = !soundEnabled;
+        this.innerText = soundEnabled ? '🔊' : '🔈';
+    };
+
+    document.getElementById('pause-btn').onclick = function() {
+        isPaused = !isPaused;
+        this.innerText = isPaused ? '▶️' : '⏸';
+        document.getElementById('user-input').disabled = isPaused;
+    };
+
+    document.getElementById('user-input').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') checkAnswer();
+    });
+</script>
+</body>
+</html>
