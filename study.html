@@ -13,7 +13,6 @@
         /* 메인 컨테이너 */
         #app { background: white; width: 90%; max-width: 450px; padding: 25px 20px; border-radius: 30px; box-shadow: 0 20px 0 rgba(0,0,0,0.2); text-align: center; position: relative; }
         
-        /* 수정된 제목 스타일 */
         .main-title { font-size: 2.2rem; font-weight: 900; color: var(--secondary); margin-bottom: 5px; letter-spacing: -1px; }
         .sub-title { font-size: 0.9rem; color: #888; margin-bottom: 20px; font-weight: 500; }
 
@@ -29,6 +28,7 @@
 
         input { width: 85%; padding: 15px; border: 3px solid #EEE; border-radius: 15px; font-size: 1.2rem; text-align: center; outline: none; margin-bottom: 15px; transition: 0.2s; }
         input:focus { border-color: var(--secondary); }
+        input:disabled { background-color: #f1f2f6; color: var(--error); font-weight: bold; }
         
         .btn-group { display: flex; gap: 10px; justify-content: center; }
         .btn { border: none; padding: 15px 25px; border-radius: 15px; cursor: pointer; font-size: 1.1rem; font-weight: bold; flex: 1; transition: 0.2s; }
@@ -71,8 +71,8 @@
     <input type="text" id="user-input" placeholder="정답을 입력하세요!" autocomplete="off">
     
     <div class="btn-group">
-        <button class="btn btn-pass" onclick="passQuestion()">모르겠어요</button>
-        <button class="btn btn-main" onclick="checkAnswer()">확인</button>
+        <button class="btn btn-pass" id="pass-btn" onclick="passQuestion()">모르겠어요</button>
+        <button class="btn btn-main" id="check-btn" onclick="checkAnswer()">확인</button>
     </div>
 </div>
 
@@ -98,10 +98,10 @@
             if (!isPaused) {
                 timeLeft--;
                 updateTimerBar();
-                if (timeLeft % 5 === 0) playTickSound(); // 째깍 사운드
+                if (timeLeft % 5 === 0) playTickSound();
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
-                    handleTimeOut();
+                    handleWrongProcess('⏰ 시간초과!');
                 }
             }
         }, 100);
@@ -111,14 +111,21 @@
         document.getElementById('timer-bar').style.width = (timeLeft / 60) * 100 + "%";
     }
 
-    function handleTimeOut() {
+    // [중요] 오답/패스/시간초과 시 공통 처리 함수
+    function handleWrongProcess(msg) {
+        clearInterval(timerInterval);
         playWrongSound();
-        triggerFeedback('⏰ 시간초과!', 'var(--error)');
+        triggerFeedback(msg, 'var(--error)');
+        
         const currentWord = wordData[currentIndex];
         const correctAnswer = quizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
-        document.getElementById('user-input').value = `정답: ${correctAnswer}`;
-        document.getElementById('user-input').disabled = true;
-        setTimeout(nextQuestion, 1800);
+        
+        const inputEl = document.getElementById('user-input');
+        inputEl.value = `정답: ${correctAnswer}`;
+        inputEl.disabled = true; // 잠시 입력 방지
+        
+        // 1.5초 후 다음 문제로
+        setTimeout(nextQuestion, 1500);
     }
 
     function nextQuestion() {
@@ -128,23 +135,27 @@
         }
         clearInterval(timerInterval);
         document.getElementById('feedback-area').innerText = '';
+        
+        // 랜덤 단어 선택
         currentIndex = Math.floor(Math.random() * wordData.length);
         quizMode = Math.random() > 0.5 ? 'ENG_TO_KOR' : 'KOR_TO_ENG';
         
         const currentWord = wordData[currentIndex];
         document.getElementById('mode-display').innerText = quizMode === 'ENG_TO_KOR' ? '영어 → 뜻' : '뜻 → 영어';
         document.getElementById('question-text').innerText = quizMode === 'ENG_TO_KOR' ? currentWord.english : currentWord.meaning;
-        document.getElementById('user-input').value = '';
-        document.getElementById('user-input').disabled = false;
-        document.getElementById('user-input').focus();
+        
+        const inputEl = document.getElementById('user-input');
+        inputEl.value = '';
+        inputEl.disabled = false;
+        inputEl.focus();
         startTimer();
     }
 
     function checkAnswer() {
-        if (isPaused || timeLeft <= 0) return;
+        if (isPaused || timeLeft <= 0 || document.getElementById('user-input').disabled) return;
+        
         const userInput = document.getElementById('user-input').value.trim().toLowerCase();
         const currentWord = wordData[currentIndex];
-        
         const answerRaw = quizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
         const correctAnswers = answerRaw.split(',').map(s => s.trim().toLowerCase());
 
@@ -157,15 +168,13 @@
             setTimeout(() => playTone(659, 0.1, 0.2, 'sine'), 100);
             setTimeout(nextQuestion, 800);
         } else {
-            playWrongSound();
-            triggerFeedback('❌ 틀렸어요!', 'var(--error)');
+            handleWrongProcess('❌ 틀렸어요!');
         }
     }
 
     function passQuestion() {
-        clearInterval(timerInterval);
-        triggerFeedback('PASS ⏩', '#636e72');
-        setTimeout(nextQuestion, 500);
+        if (document.getElementById('user-input').disabled) return;
+        handleWrongProcess('PASS ⏩');
     }
 
     function showPerfect() {
@@ -186,6 +195,7 @@
     // --- 사운드 ---
     function playTone(freq, vol, duration, type = 'sine') {
         if(!soundEnabled) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
@@ -205,7 +215,6 @@
     function playWrongSound() {
         if(!soundEnabled) return;
         playTone(180, 0.2, 0.3, 'sawtooth');
-        playTone(140, 0.2, 0.3, 'square');
     }
 
     document.getElementById('sound-toggle').onclick = function() {
