@@ -8,41 +8,51 @@
     <script src="data.js"></script>
     <style>
         :root {
-            --main-purple: #5c59d2;
-            --light-purple: #f3f2ff;
-            --yellow: #ffd54f;
-            --red: #ff7063;
-            --gray: #e0e0e0;
-            --dark-gray: #757575;
-            --green: #4caf50;
+            /* 컬러 테마 변경: 민트 & 네이비 */
+            --main-bg: #00bfa5;
+            --container-bg: #ffffff;
+            --accent-blue: #1a237e;
+            --light-mint: #e0f2f1;
+            --yellow: #ffd600;
+            --red: #ff5252;
+            --gray: #eceff1;
+            --dark-gray: #546e7a;
+            --green: #2e7d32;
         }
 
         body {
-            margin: 0; background-color: var(--main-purple);
-           display: flex; justify-content: center; align-items: flex-start; height: 100vh; margin: 0; padding-top: 5vh; overflow: hidden; }
-
+            margin: 0; background-color: var(--main-bg);
+            font-family: 'Pretendard', sans-serif;
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+        }
 
         .container {
-            width: 90%; max-width: 450px; background: white;
-            border-radius: 40px; padding: 25px 20px; text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative;
+            width: 90%; max-width: 450px; background: var(--container-bg);
+            border-radius: 40px; padding: 40px 25px; text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15); position: relative;
         }
 
         .title {
-            color: var(--main-purple); font-size: 2.4rem; font-weight: 900;
+            color: var(--accent-blue); font-size: 2.4rem; font-weight: 900;
             margin-bottom: 25px; letter-spacing: -1px;
         }
 
         .dashboard {
-            background: #f8f9fa; border-radius: 20px; padding: 12px 20px;
+            background: #f1f8f7; border-radius: 20px; padding: 12px 20px;
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 15px; font-weight: bold; font-size: 1.1rem;
         }
 
-        .timer-control { display: flex; align-items: center; gap: 8px; color: var(--main-purple); }
+        /* 사운드 제어 버튼 스타일 */
+        .sound-toggle {
+            cursor: pointer; font-size: 1.4rem; display: flex; align-items: center;
+            background: none; border: none; padding: 0 5px;
+        }
+
+        .timer-control { display: flex; align-items: center; gap: 8px; color: var(--accent-blue); }
         .btn-adj { 
             width: 28px; height: 28px; border-radius: 50%; border: none; 
-            background: var(--light-purple); color: var(--main-purple); 
+            background: var(--light-mint); color: var(--accent-blue); 
             font-weight: bold; cursor: pointer; 
         }
 
@@ -51,14 +61,14 @@
             border-radius: 5px; margin-bottom: 35px; overflow: hidden;
         }
 
-        #timer-bar { width: 100%; height: 100%; background: var(--red); transition: width 0.1s linear; }
+        #timer-bar { width: 100%; height: 100%; background: var(--main-bg); transition: width 0.1s linear; }
 
-        .quiz-content { font-size: 2.1rem; font-weight: 800; color: var(--main-purple); margin: 30px 0; min-height: 80px; word-break: keep-all; }
+        .quiz-content { font-size: 2.1rem; font-weight: 800; color: var(--accent-blue); margin: 30px 0; min-height: 80px; word-break: keep-all; }
 
         .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .input-box {
-            flex: 1; padding: 18px; font-size: 1.2rem; border: 2px solid var(--light-purple);
-            border-radius: 15px; background: var(--light-purple); outline: none; text-align: center;
+            flex: 1; padding: 18px; font-size: 1.2rem; border: 2px solid var(--light-mint);
+            border-radius: 15px; background: var(--light-mint); outline: none; text-align: center;
         }
         .btn-confirm { width: 80px; background: var(--yellow); border-radius: 15px; font-weight: bold; border: none; cursor: pointer; }
 
@@ -84,7 +94,10 @@
     <div class="title">📖 오늘의 속담</div>
     
     <div class="dashboard">
-        <div style="color:var(--main-purple)">점수: <span id="score">0</span> / 100</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="color:var(--accent-blue)">점수: <span id="score">0</span> / 100</span>
+            <button class="sound-toggle" onclick="toggleMute()" id="mute-btn">🔊</button>
+        </div>
         <div class="timer-control">
             <button class="btn-adj" onclick="adjustTime(-1)">-</button>
             <span id="timer-text">⏱️ 15.0s</span>
@@ -109,20 +122,20 @@
     </div>
 
     <div id="result-screen">
-        <h1 style="color: var(--main-purple); font-size: 2.5rem; margin-bottom: 10px;">🏆 학습 종료!</h1>
-        <p style="font-size: 1.2rem; margin-bottom: 20px;">오늘의 목표 점수를 달성했습니다!</p>
-        <h2 id="final-score" style="color: var(--yellow); font-size: 2rem; margin-bottom: 30px;">점수: 0</h2>
+        <h1 style="color: var(--accent-blue); font-size: 2.5rem; margin-bottom: 10px;">🏆 학습 종료!</h1>
+        <p style="font-size: 1.2rem; margin-bottom: 20px;">오늘의 목표를 달성했습니다!</p>
+        <h2 id="final-score" style="color: var(--main-bg); font-size: 2rem; margin-bottom: 30px;">점수: 0</h2>
         <button onclick="location.reload()" class="action-btn btn-confirm" style="width: 200px;">다시 도전</button>
     </div>
 </div>
 
 <script>
     let currentIdx = 0, score = 0, timeLeft = 15, maxTime = 15;
-    let timerInterval, isPaused = false;
-    let isProcessing = false;
+    let timerInterval, isPaused = false, isProcessing = false;
+    let isMuted = false; // 사운드 상태 변수
     let shuffledData = [];
 
-    const GOAL_SCORE = 100; // 목표 점수 설정
+    const GOAL_SCORE = 100;
 
     // 사운드 설정
     const sndCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
@@ -130,16 +143,27 @@
     const sndTick = new Audio('https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3'); 
     const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
 
+    // 사운드 재생 통합 함수
+    function playSnd(sound) {
+        if (!isMuted) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log("Sound play blocked"));
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🔊";
+    }
+
     function shuffleQuiz() {
         shuffledData = [...quizData].sort(() => Math.random() - 0.5);
     }
 
     function loadQuiz() {
-        // 모든 문제를 다 풀었거나 목표 점수에 도달한 경우
         if (currentIdx >= shuffledData.length || score >= GOAL_SCORE) {
             return showMasterResult();
         }
-        
         isProcessing = false;
         document.getElementById('question').innerText = shuffledData[currentIdx].q;
         document.getElementById('user-input').value = "";
@@ -167,9 +191,8 @@
             document.getElementById('score').innerText = score;
             msg.innerText = "🎉 정답입니다!";
             msg.className = "msg-correct";
-            sndCorrect.play();
+            playSnd(sndCorrect);
 
-            // 정답을 맞힌 후 점수 체크
             if (score >= GOAL_SCORE) {
                 setTimeout(showMasterResult, 1000);
             } else {
@@ -178,7 +201,7 @@
         } else {
             msg.innerText = `❌ 틀렸습니다! 정답은 [${correctAnswer}]`;
             msg.className = "msg-wrong";
-            sndWrong.play();
+            playSnd(sndWrong);
             setTimeout(nextQuiz, 2000);
         }
     }
@@ -207,7 +230,7 @@
             timeLeft -= 0.1;
             updateTimerUI();
 
-            if (timeLeft > 0 && Math.abs(timeLeft % 1) < 0.1) sndTick.play();
+            if (timeLeft > 0 && Math.abs(timeLeft % 1) < 0.1) playSnd(sndTick);
 
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
@@ -215,7 +238,7 @@
                 const msg = document.getElementById('status-msg');
                 msg.innerText = `⏰ 시간 초과! 정답은 [${shuffledData[currentIdx].a}]`;
                 msg.className = "msg-wrong";
-                sndWrong.play();
+                playSnd(sndWrong);
                 setTimeout(nextQuiz, 2000);
             }
         }, 100);
@@ -236,14 +259,13 @@
         document.getElementById('result-screen').style.display = 'flex';
         document.getElementById('final-score').innerText = `최종 점수: ${score}`;
         
-        // 폭죽 효과 및 축하 사운드
         confetti({ 
             particleCount: 200, 
             spread: 80, 
             origin: { y: 0.6 },
-            colors: ['#5c59d2', '#ffd54f', '#ff7063']
+            colors: ['#00bfa5', '#1a237e', '#ffd600']
         });
-        sndSuccess.play();
+        playSnd(sndSuccess);
     }
 
     document.getElementById('user-input').addEventListener('keypress', (e) => {
