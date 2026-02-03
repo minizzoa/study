@@ -11,12 +11,10 @@
 
         :root { --primary: #FFD93D; --secondary: #5F56D6; --success: #22c55e; --error: #ef4444; --text: #2D3436; }
         
-        /* 위치 상단 이동: align-items를 flex-start로 변경하고 상단 여백 추가 */
         body { font-family: 'Pretendard', sans-serif; background: var(--secondary); display: flex; justify-content: center; align-items: flex-start; height: 100vh; margin: 0; padding-top: 5vh; overflow: hidden; }
         
-        #app { background: white; width: 92%; max-width: 440px; padding: 20px; border-radius: 35px; box-shadow: 0 15px 0 rgba(0,0,0,0.2); text-align: center; }
+        #app { background: white; width: 92%; max-width: 440px; padding: 25px 20px; border-radius: 35px; box-shadow: 0 15px 0 rgba(0,0,0,0.2); text-align: center; min-height: 420px; }
         
-        /* 제목 굵게 및 가독성 강화 */
         .app-title { font-size: 2.5rem; font-weight: 900; color: var(--secondary); margin: 0 0 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; letter-spacing: -1.5px; }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 0; border-top: 1.5px dashed #eee; }
@@ -24,99 +22,91 @@
         .btn-mini { border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; background: #f1f2f6; font-weight: 600; transition: 0.2s; }
         .btn-mini.active { background: var(--secondary); color: white; }
 
-        .stats { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 15px; margin-bottom: 12px; font-weight: 600; font-size: 0.95rem; }
+        /* 스탯 라인 개선: 글자 크기 키움 */
+        .stats { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 12px 18px; border-radius: 20px; margin-bottom: 15px; font-weight: 800; font-size: 1.1rem; }
         
-        .timer-container { width: 100%; height: 10px; background: #eee; border-radius: 5px; margin-bottom: 12px; overflow: hidden; }
+        /* 스탯 내 속도 조절 UI */
+        .speed-adj-group { display: flex; align-items: center; gap: 8px; background: white; padding: 4px 10px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .btn-adj { border: none; background: none; color: var(--secondary); font-size: 1.3rem; font-weight: 900; cursor: pointer; padding: 0 5px; transition: 0.1s; }
+        .btn-adj:active { transform: scale(1.3); }
+        #limit-display { color: var(--text); min-width: 65px; text-align: center; font-size: 1.1rem; }
+
+        .timer-container { width: 100%; height: 10px; background: #eee; border-radius: 5px; margin-bottom: 15px; overflow: hidden; }
         #timer-bar { width: 100%; height: 100%; background: var(--error); transition: width 0.1s linear; }
 
         .word-box { font-size: 2.8rem; font-weight: 900; color: var(--secondary); min-height: 80px; display: flex; align-items: center; justify-content: center; }
         #feedback-area { height: 35px; font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; justify-content: center; }
 
-        /* 입력란 색상 및 스타일 강화 */
         .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
         input { flex: 4; padding: 14px; border: 3px solid #E0DFFD; background-color: #F8F7FF; border-radius: 18px; font-size: 1.2rem; text-align: center; outline: none; transition: 0.3s; color: var(--secondary); font-weight: 600; }
-        input:focus { border-color: var(--secondary); background-color: #FFFFFF; box-shadow: 0 0 10px rgba(95, 86, 214, 0.2); }
-        input::placeholder { color: #A29BFE; }
         
-        .btn-confirm { flex: 1.2; background: var(--primary); border: none; border-radius: 18px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #E6C235; transition: 0.1s; }
+        /* 확인 버튼 글자 크기 확대 */
+        .btn-confirm { flex: 1.5; background: var(--primary); border: none; border-radius: 18px; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 0 #E6C235; transition: 0.1s; }
         .btn-confirm:active { transform: translateY(3px); box-shadow: none; }
 
-        .control-row { display: flex; gap: 6px; margin-bottom: 8px; }
-        .btn-ctrl { background: #dfe6e9; border: none; padding: 10px; border-radius: 15px; font-weight: 600; cursor: pointer; flex: 1; font-size: 0.9rem; box-shadow: 0 3px 0 #b2bec3; }
+        .control-row { display: flex; gap: 8px; }
+        .btn-ctrl { background: #dfe6e9; border: none; padding: 12px; border-radius: 18px; font-weight: 600; cursor: pointer; flex: 1; font-size: 1rem; box-shadow: 0 3px 0 #b2bec3; }
         .btn-pause { background: #ff7675; color: white; box-shadow: 0 3px 0 #d63031; }
         
-        .speed-ctrl { flex: 1.8; background: #f1f2f6; border-radius: 15px; display: flex; align-items: center; justify-content: space-around; }
-        .speed-btn { border: none; background: none; font-size: 1.2rem; cursor: pointer; color: var(--secondary); font-weight: 900; }
-        
-        .speed-presets { width: 100%; display: flex; gap: 4px; }
-        .btn-speed { flex: 1; padding: 8px; font-size: 0.75rem; border: none; border-radius: 10px; cursor: pointer; background: #f1f2f6; font-weight: 600; color: #636e72; }
-
-        #perfect-screen { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(95, 86, 214, 0.98); color: white; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
+        .result-view { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 30px 0; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
 
-<div id="perfect-screen">
-    <h1 style="font-size: 3.5rem; font-weight: 900;">🏆 PERFECT!</h1>
-    <p style="font-size: 1.3rem;">모든 단어를 마스터했습니다!</p>
-    <button style="padding: 12px 30px; border-radius: 15px; border:none; background:var(--primary); font-weight:900; cursor:pointer; margin-top:20px; box-shadow: 0 5px 0 #E6C235;" onclick="location.reload()">다시 시작</button>
-</div>
-
 <div id="app">
-    <h1 class="app-title"><span>📖</span> 오늘의 단어</h1>
+    <div id="game-container">
+        <h1 class="app-title"><span>📖</span> 오늘의 단어</h1>
 
-    <div class="header">
-        <span id="sound-toggle" style="cursor:pointer; font-size: 1.5rem;">🔊</span>
-        <div class="mode-group">
-            <button class="btn-mini active" onclick="setCategory('ENG_TO_KOR', this)">영한</button>
-            <button class="btn-mini" onclick="setCategory('KOR_TO_ENG', this)">한영</button>
-            <button class="btn-mini" onclick="setCategory('RANDOM', this)">랜덤</button>
+        <div class="header">
+            <span id="sound-toggle" style="cursor:pointer; font-size: 1.5rem;">🔊</span>
+            <div class="mode-group">
+                <button class="btn-mini active" onclick="setCategory('ENG_TO_KOR', this)">영한</button>
+                <button class="btn-mini" onclick="setCategory('KOR_TO_ENG', this)">한영</button>
+                <button class="btn-mini" onclick="setCategory('RANDOM', this)">랜덤</button>
+            </div>
         </div>
-    </div>
 
-    <div class="stats">
-        <span>점수: <span id="score" style="color:var(--secondary)">0</span></span>
-        <span id="limit-display" style="color:#636e72">⏱ 10.0s</span>
-    </div>
-
-    <div class="timer-container"><div id="timer-bar"></div></div>
-    <div class="word-box" id="question-text">...</div>
-    <div id="feedback-area"></div>
-    
-    <div class="input-row">
-        <input type="text" id="user-input" placeholder="정답을 입력하세요" autocomplete="off">
-        <button class="btn-confirm" onclick="checkAnswer()">확인</button>
-    </div>
-    
-    <div class="control-row">
-        <button class="btn-ctrl" onclick="passQuestion()">PASS</button>
-        <button class="btn-ctrl btn-pause" id="pause-btn" onclick="togglePause()">⏸ 정지</button>
-        <div class="speed-ctrl">
-            <button class="speed-btn" onclick="adjustSpeed(-1)">−</button>
-            <span id="speed-val" style="font-weight: 900;">10s</span>
-            <button class="speed-btn" onclick="adjustSpeed(1)">+</button>
+        <div class="stats">
+            <span>점수: <span id="score" style="color:var(--secondary); font-size: 1.3rem;">0</span></span>
+            <div class="speed-adj-group">
+                <button class="btn-adj" onclick="changeSpeed(-10)">−</button>
+                <span id="limit-display">⏱ 10.0s</span>
+                <button class="btn-adj" onclick="changeSpeed(10)">+</button>
+            </div>
         </div>
-    </div>
 
-    <div class="speed-presets">
-        <button class="btn-speed" onclick="setSpeed(150)">🐢 15s</button>
-        <button class="btn-speed" onclick="setSpeed(100)">😐 10s</button>
-        <button class="btn-speed" onclick="setSpeed(60)">⚡ 6s</button>
+        <div class="timer-container"><div id="timer-bar"></div></div>
+        <div class="word-box" id="question-text">...</div>
+        <div id="feedback-area"></div>
+        
+        <div class="input-row">
+            <input type="text" id="user-input" placeholder="정답 입력" autocomplete="off">
+            <button class="btn-confirm" onclick="checkAnswer()">확인</button>
+        </div>
+        
+        <div class="control-row">
+            <button class="btn-ctrl" onclick="passQuestion()">PASS</button>
+            <button class="btn-ctrl btn-pause" id="pause-btn" onclick="togglePause()">⏸ 정지</button>
+        </div>
     </div>
 </div>
 
 <script>
-    // [이전 스크립트 로직 유지 - 틱소리, 타이머, 정답 확인 등 모든 기능 포함]
     let score = 0, currentIndex = 0, soundEnabled = true, isPaused = false;
     let category = 'ENG_TO_KOR', currentQuizMode = 'ENG_TO_KOR', baseTime = 100, timeLeft = 100, timerInterval;
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     window.onload = () => { if(typeof wordData !== 'undefined') nextQuestion(); };
 
-    function playTickSound() {
-        if(!soundEnabled || isPaused) return;
-        const pitch = timeLeft < 30 ? 800 : 400;
-        playTone(pitch, 0.02, 0.05, 'sine');
+    function changeSpeed(delta) {
+        let newTime = baseTime + delta;
+        if (newTime >= 10 && newTime <= 300) { 
+            baseTime = newTime;
+            const displayVal = (baseTime / 10).toFixed(1) + 's';
+            document.getElementById('limit-display').innerText = `⏱ ${displayVal}`;
+            // 속도 변경 시 현재 진행 중인 타이머도 즉시 리셋하고 싶다면 startTimer() 호출 가능
+        }
     }
 
     function togglePause() {
@@ -130,20 +120,6 @@
         if(!isPaused) input.focus();
     }
 
-    function setCategory(mode, btn) {
-        category = mode;
-        document.querySelectorAll('.btn-mini').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        nextQuestion();
-    }
-
-    function adjustSpeed(val) { baseTime = Math.max(10, baseTime + (val * 10)); updateSpeedUI(); }
-    function setSpeed(val) { baseTime = val; updateSpeedUI(); }
-    function updateSpeedUI() {
-        document.getElementById('speed-val').innerText = (baseTime/10) + 's';
-        document.getElementById('limit-display').innerText = `⏱ ${(baseTime/10).toFixed(1)}s`;
-    }
-
     function startTimer() {
         clearInterval(timerInterval);
         timeLeft = baseTime;
@@ -152,7 +128,10 @@
             if (!isPaused) {
                 timeLeft--;
                 updateTimerBar();
-                if (timeLeft % 10 === 0) playTickSound();
+                if (timeLeft % 10 === 0 && soundEnabled) {
+                    const pitch = timeLeft < 30 ? 800 : 400;
+                    playTone(pitch, 0.02, 0.05, 'sine');
+                }
                 if (timeLeft <= 0) { clearInterval(timerInterval); handleWrongProcess('⏰ 시간초과!'); }
             }
         }, 100);
@@ -162,7 +141,7 @@
 
     function handleWrongProcess(msg) {
         clearInterval(timerInterval);
-        playWrongSound();
+        playTone(150, 0.2, 0.4, 'sawtooth');
         triggerFeedback(msg, 'var(--error)');
         const currentWord = wordData[currentIndex];
         const correctAnswer = currentQuizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
@@ -178,8 +157,7 @@
         document.getElementById('feedback-area').innerText = '';
         currentIndex = Math.floor(Math.random() * wordData.length);
         currentQuizMode = category === 'RANDOM' ? (Math.random() > 0.5 ? 'ENG_TO_KOR' : 'KOR_TO_ENG') : category;
-        const currentWord = wordData[currentIndex];
-        document.getElementById('question-text').innerText = currentQuizMode === 'ENG_TO_KOR' ? currentWord.english : currentWord.meaning;
+        document.getElementById('question-text').innerText = currentQuizMode === 'ENG_TO_KOR' ? wordData[currentIndex].english : wordData[currentIndex].meaning;
         const inputEl = document.getElementById('user-input');
         inputEl.value = ''; inputEl.disabled = false; inputEl.focus();
         startTimer();
@@ -201,10 +179,35 @@
         } else { handleWrongProcess('❌ 틀렸어요!'); }
     }
 
-    function passQuestion() { if (!document.getElementById('user-input').disabled) handleWrongProcess('PASS ⏩'); }
-    function showPerfect() { document.getElementById('perfect-screen').style.display = 'flex'; playVictorySound(); confetti({ particleCount: 150, spread: 70 }); }
-    function triggerFeedback(text, color) { const area = document.getElementById('feedback-area'); area.innerText = text; area.style.color = color; }
+    function showPerfect() {
+        clearInterval(timerInterval);
+        const container = document.getElementById('game-container');
+        container.innerHTML = `
+            <div class="result-view">
+                <div style="font-size: 5rem; margin-bottom: 10px;">🏆</div>
+                <h1 style="font-size: 2.5rem; font-weight: 900; color: var(--secondary); margin: 0 0 10px 0;">PERFECT!</h1>
+                <p style="font-size: 1.2rem; color: #666; line-height: 1.6; margin-bottom: 30px;">축하합니다!<br>모든 단어를 마스터했습니다.</p>
+                <button class="btn-confirm" style="padding: 15px 45px; font-size: 1.2rem; width: auto;" onclick="location.reload()">다시 시작하기</button>
+            </div>
+        `;
+        [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 0.1, 0.5, 'triangle'), i * 150));
+        const end = Date.now() + 3000;
+        (function frame() {
+            confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#5F56D6', '#FFD93D'] });
+            confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#5F56D6', '#FFD93D'] });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+    }
 
+    function setCategory(mode, btn) {
+        category = mode;
+        document.querySelectorAll('.btn-mini').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        nextQuestion();
+    }
+
+    function passQuestion() { if (!document.getElementById('user-input').disabled) handleWrongProcess('PASS ⏩'); }
+    function triggerFeedback(text, color) { const area = document.getElementById('feedback-area'); area.innerText = text; area.style.color = color; }
     function playTone(freq, vol, duration, type = 'sine') {
         if(!soundEnabled) return;
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -216,8 +219,6 @@
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
         osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
-    function playVictorySound() { [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 0.1, 0.5, 'triangle'), i * 150)); }
-    function playWrongSound() { playTone(150, 0.2, 0.4, 'sawtooth'); playTone(110, 0.2, 0.4, 'square'); }
     document.getElementById('sound-toggle').onclick = function() { soundEnabled = !soundEnabled; this.innerText = soundEnabled ? '🔊' : '🔈'; };
     document.getElementById('user-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') checkAnswer(); });
 </script>
