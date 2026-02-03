@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>랜덤 뽑기 - 다이내믹 에디션</title>
+    <title>랜덤 뽑기 - 사운드 에디션</title>
     <style>
         :root {
             --bg-dark: #0a0f14;
@@ -28,7 +28,6 @@
             font-size: 1.3rem;
             color: var(--neon-mint); 
             text-shadow: 0 0 10px var(--mint-glow);
-            text-align: center;
         }
 
         .results-container {
@@ -46,7 +45,6 @@
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
-        /* 머신 및 공 애니메이션 */
         .lucky-machine { position: relative; margin-bottom: 10px; }
 
         .glass-dome {
@@ -59,12 +57,9 @@
 
         .mixing-ball {
             position: absolute; width: 24px; height: 24px; border-radius: 50%;
-            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4);
-            z-index: 6;
-            transition: transform 0.1s;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4); z-index: 6;
         }
 
-        /* 역동적 움직임 핵심 애니메이션 */
         @keyframes shuffle {
             0% { transform: translate(0, 0) rotate(0deg); }
             25% { transform: translate(var(--rx), var(--ry)) rotate(90deg); }
@@ -73,9 +68,7 @@
             100% { transform: translate(0, 0) rotate(360deg); }
         }
 
-        .is-mixing .mixing-ball {
-            animation: shuffle var(--speed) infinite linear;
-        }
+        .is-mixing .mixing-ball { animation: shuffle var(--speed) infinite linear; }
 
         .machine-body {
             width: 180px; height: 100px;
@@ -125,24 +118,19 @@
             box-shadow: 0 0 15px var(--mint-glow); cursor: pointer;
         }
 
-        /* 홈 버튼 스타일 (흐름에 따라 제일 아래 배치) */
-        .home-section {
-            margin-top: 30px; padding-bottom: 20px;
-        }
+        .home-section { margin-top: 30px; padding-bottom: 20px; }
         .btn-home {
             background: transparent; color: #666; border: 1px solid #333;
             padding: 10px 30px; border-radius: 25px; font-size: 0.9rem;
-            display: flex; align-items: center; gap: 8px; cursor: pointer;
-            text-decoration: none; transition: 0.3s;
+            display: flex; align-items: center; gap: 8px; text-decoration: none;
         }
-        .btn-home:hover { border-color: var(--neon-mint); color: var(--neon-mint); }
 
         @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h2>⚡ DYNAMIC LOTTO ⚡</h2>
+    <h2>⚡ DYNAMIC SOUND LOTTO ⚡</h2>
 
     <div class="results-container" id="results"></div>
 
@@ -179,52 +167,99 @@
         const drawBtn = document.getElementById('drawBtn');
         const activeBallSlot = document.getElementById('activeBallSlot');
         const resultsContainer = document.getElementById('results');
+        const soundToggle = document.getElementById('soundToggle');
 
         const ballColors = ['#FF006E', '#8338EC', '#00F5D4', '#FFBE0B', '#FB5607', '#3A86FF'];
         let isMuted = false;
+        
+        // 사운드 관련 변수
+        let audioCtx = null;
+        let mixOscillator = null;
+        let mixGain = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // 공 뽑힐 때 "띵" 소리
+        function playPickSound() {
+            if (isMuted || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 고음
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+        }
+
+        // 공 섞이는 "달그락" 소리 시작
+        function startMixingSound() {
+            if (isMuted || !audioCtx) return;
+            mixOscillator = audioCtx.createOscillator();
+            mixGain = audioCtx.createGain();
+            mixOscillator.type = 'triangle';
+            mixOscillator.frequency.setValueAtTime(110, audioCtx.currentTime); // 저음
+            
+            // 주파수 변조로 달그락거리는 느낌 생성
+            const lfo = audioCtx.createOscillator();
+            lfo.frequency.setValueAtTime(15, audioCtx.currentTime); 
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.setValueAtTime(50, audioCtx.currentTime);
+            lfo.connect(lfoGain); lfoGain.connect(mixOscillator.frequency);
+            
+            mixGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            mixOscillator.connect(mixGain); mixGain.connect(audioCtx.destination);
+            
+            lfo.start(); mixOscillator.start();
+        }
+
+        // 사운드 중단
+        function stopMixingSound() {
+            if (mixOscillator) {
+                mixOscillator.stop();
+                mixOscillator = null;
+            }
+        }
 
         function createBalls() {
             ballPit.innerHTML = '';
             for(let i=0; i<30; i++) {
                 const b = document.createElement('div');
                 b.className = 'mixing-ball';
-                
-                // 역동적인 위치 및 애니메이션 변수 설정
                 const rx = Math.random() * 150 - 75;
                 const ry = Math.random() * 150 - 75;
                 const bx = Math.random() * 150 - 75;
                 const by = Math.random() * 150 - 75;
                 const speed = (0.3 + Math.random() * 0.4) + 's';
-
                 b.style.backgroundColor = ballColors[i % ballColors.length];
-                b.style.left = '85px';
-                b.style.top = '85px';
-                b.style.setProperty('--rx', rx + 'px');
-                b.style.setProperty('--ry', ry + 'px');
-                b.style.setProperty('--bx', bx + 'px');
-                b.style.setProperty('--by', by + 'px');
-                b.style.setProperty('--gx', -rx + 'px');
-                b.style.setProperty('--gy', -ry + 'px');
+                b.style.left = '85px'; b.style.top = '85px';
+                b.style.setProperty('--rx', rx + 'px'); b.style.setProperty('--ry', ry + 'px');
+                b.style.setProperty('--bx', bx + 'px'); b.style.setProperty('--by', by + 'px');
+                b.style.setProperty('--gx', -rx + 'px'); b.style.setProperty('--gy', -ry + 'px');
                 b.style.setProperty('--speed', speed);
-                
                 ballPit.appendChild(b);
             }
         }
 
         async function startDrawing() {
+            initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
             const count = parseInt(document.getElementById('ballCount').value);
             const max = parseInt(document.getElementById('maxRange').value);
-            
             if (count > max) return alert("범위 오류!");
 
             drawBtn.disabled = true;
             resultsContainer.innerHTML = '';
             dome.classList.add('is-mixing');
+            startMixingSound(); // 섞기 소리 시작
             
             let picked = [];
 
             for (let i = 0; i < count; i++) {
-                await new Promise(r => setTimeout(r, 400)); 
+                await new Promise(r => setTimeout(r, 600)); 
 
                 let num;
                 do { num = Math.floor(Math.random() * max) + 1; } while (picked.includes(num));
@@ -234,8 +269,9 @@
                 activeBallSlot.style.background = `radial-gradient(circle at 30% 30%, #fff, ${color})`;
                 activeBallSlot.innerText = num;
                 activeBallSlot.classList.add('drop');
+                playPickSound(); // 뽑기 소리
                 
-                await new Promise(r => setTimeout(r, 700));
+                await new Promise(r => setTimeout(r, 800));
 
                 const resBall = document.createElement('div');
                 resBall.className = 'result-ball';
@@ -245,12 +281,18 @@
                 resultsContainer.scrollTo({ left: resultsContainer.scrollWidth, behavior: 'smooth' });
 
                 activeBallSlot.classList.remove('drop');
-                await new Promise(r => setTimeout(r, 200));
             }
 
             dome.classList.remove('is-mixing');
+            stopMixingSound(); // 섞기 소리 중단
             drawBtn.disabled = false;
         }
+
+        soundToggle.addEventListener('click', () => {
+            isMuted = !isMuted;
+            soundToggle.innerText = isMuted ? "🔇 사운드 OFF" : "🔊 사운드 ON";
+            if (isMuted) stopMixingSound();
+        });
 
         drawBtn.addEventListener('click', startDrawing);
         createBalls();
