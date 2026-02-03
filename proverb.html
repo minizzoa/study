@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 속담 퀴즈</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="data.js"></script>
+    <style>
+        :root {
+            --main-purple: #5c59d2;
+            --light-purple: #f3f2ff;
+            --yellow: #ffd54f;
+            --red: #ff7063;
+            --gray: #e0e0e0;
+            --dark-gray: #757575;
+            --green: #4caf50;
+        }
+
+        body {
+            margin: 0; background-color: var(--main-purple);
+            font-family: 'Pretendard', sans-serif;
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+        }
+
+        .container {
+            width: 90%; max-width: 450px; background: white;
+            border-radius: 40px; padding: 40px 25px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative;
+        }
+
+        .title {
+            color: var(--main-purple); font-size: 2.4rem; font-weight: 900;
+            margin-bottom: 25px; letter-spacing: -1px;
+        }
+
+        .dashboard {
+            background: #f8f9fa; border-radius: 20px; padding: 12px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; font-weight: bold; font-size: 1.1rem;
+        }
+
+        .timer-control { display: flex; align-items: center; gap: 8px; color: var(--main-purple); }
+        .btn-adj { 
+            width: 28px; height: 28px; border-radius: 50%; border: none; 
+            background: var(--light-purple); color: var(--main-purple); 
+            font-weight: bold; cursor: pointer; 
+        }
+
+        .timer-container {
+            width: 100%; height: 10px; background: var(--gray);
+            border-radius: 5px; margin-bottom: 35px; overflow: hidden;
+        }
+
+        #timer-bar { width: 100%; height: 100%; background: var(--red); transition: width 0.1s linear; }
+
+        .quiz-content { font-size: 2.1rem; font-weight: 800; color: var(--main-purple); margin: 30px 0; min-height: 80px; word-break: keep-all; }
+
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-box {
+            flex: 1; padding: 18px; font-size: 1.2rem; border: 2px solid var(--light-purple);
+            border-radius: 15px; background: var(--light-purple); outline: none; text-align: center;
+        }
+        .btn-confirm { width: 80px; background: var(--yellow); border-radius: 15px; font-weight: bold; border: none; cursor: pointer; }
+
+        #status-msg { height: 25px; font-weight: bold; margin-bottom: 20px; font-size: 1.1rem; }
+        .msg-correct { color: var(--green); }
+        .msg-wrong { color: var(--red); }
+
+        .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        button.action-btn { border: none; border-radius: 20px; padding: 18px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .btn-pass { background: var(--gray); color: var(--dark-gray); }
+        .btn-stop { background: var(--red); color: white; }
+
+        #result-screen {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; border-radius: 40px; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="title">📖 오늘의 속담</div>
+    
+    <div class="dashboard">
+        <div style="color:var(--main-purple)">점수: <span id="score">0</span> / 100</div>
+        <div class="timer-control">
+            <button class="btn-adj" onclick="adjustTime(-1)">-</button>
+            <span id="timer-text">⏱️ 15.0s</span>
+            <button class="btn-adj" onclick="adjustTime(1)">+</button>
+        </div>
+    </div>
+
+    <div class="timer-container"><div id="timer-bar"></div></div>
+
+    <div class="quiz-content" id="question">로딩 중...</div>
+
+    <div class="input-row">
+        <input type="text" id="user-input" class="input-box" placeholder="정답 입력" autocomplete="off">
+        <button class="btn-confirm" onclick="checkAnswer()">확인</button>
+    </div>
+
+    <div id="status-msg"></div>
+
+    <div class="control-row">
+        <button class="action-btn btn-pass" onclick="nextQuiz()">PASS</button>
+        <button class="action-btn btn-stop" id="pause-btn" onclick="togglePause()">⏸ 정지</button>
+    </div>
+
+    <div id="result-screen">
+        <h1 style="color: var(--main-purple); font-size: 2.5rem; margin-bottom: 10px;">🏆 학습 종료!</h1>
+        <p style="font-size: 1.2rem; margin-bottom: 20px;">오늘의 목표 점수를 달성했습니다!</p>
+        <h2 id="final-score" style="color: var(--yellow); font-size: 2rem; margin-bottom: 30px;">점수: 0</h2>
+        <button onclick="location.reload()" class="action-btn btn-confirm" style="width: 200px;">다시 도전</button>
+    </div>
+</div>
+
+<script>
+    let currentIdx = 0, score = 0, timeLeft = 15, maxTime = 15;
+    let timerInterval, isPaused = false;
+    let isProcessing = false;
+    let shuffledData = [];
+
+    const GOAL_SCORE = 100; // 목표 점수 설정
+
+    // 사운드 설정
+    const sndCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+    const sndWrong = new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3');
+    const sndTick = new Audio('https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3'); 
+    const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
+
+    function shuffleQuiz() {
+        shuffledData = [...quizData].sort(() => Math.random() - 0.5);
+    }
+
+    function loadQuiz() {
+        // 모든 문제를 다 풀었거나 목표 점수에 도달한 경우
+        if (currentIdx >= shuffledData.length || score >= GOAL_SCORE) {
+            return showMasterResult();
+        }
+        
+        isProcessing = false;
+        document.getElementById('question').innerText = shuffledData[currentIdx].q;
+        document.getElementById('user-input').value = "";
+        document.getElementById('user-input').disabled = false;
+        document.getElementById('status-msg').innerText = "";
+        document.getElementById('user-input').focus();
+        resetTimer();
+    }
+
+    function checkAnswer() {
+        if (isPaused || isProcessing) return;
+        
+        const userInput = document.getElementById('user-input').value;
+        const msg = document.getElementById('status-msg');
+        const correctAnswer = shuffledData[currentIdx].a;
+
+        const cleanInput = userInput.replace(/\s+/g, '');
+        const cleanAnswer = correctAnswer.replace(/\s+/g, '');
+
+        isProcessing = true;
+        clearInterval(timerInterval);
+
+        if (cleanInput === cleanAnswer) {
+            score += 10;
+            document.getElementById('score').innerText = score;
+            msg.innerText = "🎉 정답입니다!";
+            msg.className = "msg-correct";
+            sndCorrect.play();
+
+            // 정답을 맞힌 후 점수 체크
+            if (score >= GOAL_SCORE) {
+                setTimeout(showMasterResult, 1000);
+            } else {
+                setTimeout(nextQuiz, 1000); 
+            }
+        } else {
+            msg.innerText = `❌ 틀렸습니다! 정답은 [${correctAnswer}]`;
+            msg.className = "msg-wrong";
+            sndWrong.play();
+            setTimeout(nextQuiz, 2000);
+        }
+    }
+
+    function adjustTime(amount) {
+        maxTime = Math.max(3, maxTime + amount);
+        timeLeft = maxTime;
+        updateTimerUI();
+    }
+
+    function togglePause() {
+        if (isProcessing) return;
+        isPaused = !isPaused;
+        document.getElementById('pause-btn').innerText = isPaused ? "▶ 재개" : "⏸ 정지";
+        document.getElementById('user-input').disabled = isPaused;
+        if (!isPaused) document.getElementById('user-input').focus();
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        timeLeft = maxTime;
+        updateTimerUI();
+        
+        timerInterval = setInterval(() => {
+            if (isPaused) return;
+            timeLeft -= 0.1;
+            updateTimerUI();
+
+            if (timeLeft > 0 && Math.abs(timeLeft % 1) < 0.1) sndTick.play();
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                isProcessing = true;
+                const msg = document.getElementById('status-msg');
+                msg.innerText = `⏰ 시간 초과! 정답은 [${shuffledData[currentIdx].a}]`;
+                msg.className = "msg-wrong";
+                sndWrong.play();
+                setTimeout(nextQuiz, 2000);
+            }
+        }, 100);
+    }
+
+    function updateTimerUI() {
+        document.getElementById('timer-text').innerText = `⏱️ ${timeLeft.toFixed(1)}s`;
+        document.getElementById('timer-bar').style.width = (timeLeft / maxTime) * 100 + "%";
+    }
+
+    function nextQuiz() {
+        currentIdx++;
+        loadQuiz();
+    }
+
+    function showMasterResult() {
+        clearInterval(timerInterval);
+        document.getElementById('result-screen').style.display = 'flex';
+        document.getElementById('final-score').innerText = `최종 점수: ${score}`;
+        
+        // 폭죽 효과 및 축하 사운드
+        confetti({ 
+            particleCount: 200, 
+            spread: 80, 
+            origin: { y: 0.6 },
+            colors: ['#5c59d2', '#ffd54f', '#ff7063']
+        });
+        sndSuccess.play();
+    }
+
+    document.getElementById('user-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkAnswer();
+    });
+
+    window.onload = () => {
+        shuffleQuiz();
+        loadQuiz();
+    };
+</script>
+</body>
+</html>
