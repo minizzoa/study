@@ -19,13 +19,12 @@
 
         body {
             margin: 0; background-color: var(--main-purple);
-            font-family: 'Pretendard', sans-serif;
-            display: flex; justify-content: center; align-items: center; height: 100vh;
-        }
+           display: flex; justify-content: center; align-items: flex-start; height: 100vh; margin: 0; padding-top: 5vh; overflow: hidden; }
+
 
         .container {
             width: 90%; max-width: 450px; background: white;
-            border-radius: 40px; padding: 40px 25px; text-align: center;
+            border-radius: 40px; padding: 25px 20px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative;
         }
 
@@ -193,7 +192,7 @@
     function togglePause() {
         if (isProcessing) return;
         isPaused = !isPaused;
-        document.getElementById('pause-btn').innerText = isPaused ? "▶ 재개" : "⏸ 정지";
+        document.getElementById('pause-btn').innerText = isPaused ? "▶ 시작" : "⏸ 정지";
         document.getElementById('user-input').disabled = isPaused;
         if (!isPaused) document.getElementById('user-input').focus();
     }
