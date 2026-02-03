@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>똑똑해지는 세계사 퀴즈</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="world_history.js"></script>
+    <style>
+        :root {
+            /* 연두색 테마 설정 */
+            --main-green: #8bc34a;      /* 메인 연두색 */
+            --light-green: #f1f8e9;     /* 배경 및 연한 포인트 */
+            --dark-green: #33691e;      /* 제목 및 강조 텍스트 */
+            --container-bg: #ffffff;
+            --accent-red: #ff5252;      /* 정지 버튼 및 포인트용 레드 */
+            --dark-red: #d32f2f;        /* 정지 버튼 그림자용 */
+            --gray: #fdfdfd;
+            --deep-gray: #eceff1;
+            --text-color: #37474f;
+        }
+
+        body {
+            margin: 0; background-color: var(--main-green);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            display: flex; justify-content: center; 
+            align-items: flex-start; 
+            padding-top: 30px;
+            height: 100vh; 
+        }
+        .container {
+            width: 95%; max-width: 550px; 
+            background: var(--container-bg);
+            border-radius: 40px; padding: 30px 20px; text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); position: relative;
+        }
+
+        .title {
+            color: var(--dark-green); font-size: 2rem; font-weight: 900;
+            margin-bottom: 20px; letter-spacing: -1px;
+        }
+
+        .dashboard {
+            background: var(--light-green); border-radius: 20px; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; font-weight: bold; font-size: 1rem;
+            border: 2px solid #dcedc8;
+        }
+
+        .life-container { color: var(--accent-red); font-size: 1.1rem; }
+        .sound-toggle { cursor: pointer; font-size: 1rem; background: none; border: none; }
+
+        .timer-control { display: flex; align-items: center; gap: 4px; }
+        .btn-adj { 
+            width: 22px; height: 22px; border-radius: 50%; border: none; 
+            background: white; color: var(--main-green); font-weight: bold; cursor: pointer;
+        }
+
+        .timer-container {
+            width: 100%; height: 8px; background: var(--deep-gray);
+            border-radius: 10px; margin-bottom: 15px; overflow: hidden;
+        }
+        #timer-bar { width: 100%; height: 100%; background: var(--main-green); transition: width 0.1s linear; }
+
+        .quiz-content { 
+            font-size: 1.6rem; font-weight: 800; color: var(--text-color); 
+             margin-top: 20px; margin-bottom: 5px; min-height: 80px; word-break: keep-all; 
+            display: flex; align-items: center; justify-content: center; line-height: 1.3;
+        }
+
+        #status-msg { 
+            min-height: 40px; font-weight: 800; margin-bottom: 15px; 
+            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+        }
+
+        .msg-correct { color: #2e7d32; font-size: 1.6rem; }
+        .msg-wrong { color: #555; } 
+        .answer-highlight { color: var(--accent-red); font-size: 1.4rem; font-weight: 900; margin: 0 5px; }
+
+        .input-row { display: flex; gap: 10px; margin-bottom: 0px; }
+        .input-box {
+            flex: 1; padding: 15px; font-size: 1.3em; border: 3px solid var(--light-green);
+            border-radius: 15px; background: #f9fbe7; outline: none; text-align: center;
+            font-weight: 800; color: var(--dark-green);
+        }
+        
+        .btn-confirm { 
+            width: 90px; background: var(--main-green); border-radius: 15px; 
+            font-size: 1.2rem; font-weight: 900; border: none; cursor: pointer;
+            box-shadow: 0 4px 0 var(--dark-green); color: white;
+        }
+        .btn-confirm:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--dark-green); }
+
+        .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        button.action-btn { border: none; border-radius: 20px; padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        
+        .btn-pass { background: var(--deep-gray); color: #78909c; }
+        
+        .btn-stop { 
+            background: var(--accent-red); 
+            color: white; 
+            box-shadow: 0 4px 0 var(--dark-red);
+        }
+        .btn-stop:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--dark-red); }
+
+        #result-screen {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; border-radius: 40px; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="title">🌍 세계사 퀴즈</div>
+    
+    <div class="dashboard">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="life-container" id="life-display">❤️❤️❤️❤️❤️</span>
+            <button class="sound-toggle" onclick="toggleMute()" id="mute-btn">🔊</button>
+        </div>
+        <div style="color:var(--dark-green)">점수: <span id="score">0</span></div>
+        <div class="timer-control">
+            <button class="btn-adj" onclick="adjustTime(-1)">-</button>
+            <span id="timer-text" style="min-width: 50px;">⏱️ 15.0s</span>
+            <button class="btn-adj" onclick="adjustTime(1)">+</button>
+        </div>
+    </div>
+
+    <div class="timer-container"><div id="timer-bar"></div></div>
+
+    <div class="quiz-content" id="question">문제를 불러오는 중...</div>
+
+    <div id="status-msg"></div>
+
+    <div class="input-row">
+        <input type="text" id="user-input" class="input-box" placeholder="정답 입력" autocomplete="off">
+        <button class="btn-confirm" onclick="checkAnswer()">확인</button>
+    </div>
+
+    <div class="control-row">
+        <button class="action-btn btn-pass" onclick="handleWrongAnswer(true)">PASS</button>
+        <button class="action-btn btn-stop" id="pause-btn" onclick="togglePause()">⏸ 정지</button>
+    </div>
+
+    <div id="result-screen">
+        <h1 id="result-title" style="color: var(--dark-green); font-size: 1.8rem; margin-bottom: 5px;">🎮 게임 종료!</h1>
+        <p id="result-desc" style="font-size: 1rem; margin-bottom: 15px;">놀라운 세계사 지식입니다!</p>
+        <h2 id="final-score" style="color: var(--accent-red); font-size: 1.6rem; margin-bottom: 20px;">점수: 0</h2>
+        <button onclick="location.reload()" class="action-btn btn-confirm" style="width: 160px; height: 50px;">다시 시작</button>
+    </div>
+</div>
+
+<script>
+
+    let currentIdx = 0, score = 0, timeLeft = 15, maxTime = 15;
+    let wrongCount = 0;
+    const MAX_WRONG = 5;
+    let timerInterval, isPaused = false, isProcessing = false;
+    let isMuted = false;
+    let shuffledData = [];
+
+    const sndCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+    const sndWrong = new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3');
+    const sndTick = new Audio('https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3'); 
+    const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'); 
+
+    function playSnd(sound) {
+        if (!isMuted) {
+            sound.currentTime = 0;
+            sound.play().catch(e => {});
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🔊";
+    }
+
+    function shuffleQuiz() {
+        shuffledData = [...quizData].sort(() => Math.random() - 0.5);
+    }
+
+    function updateLifeUI() {
+        const lifeStr = "❤️".repeat(MAX_WRONG - wrongCount) + "🖤".repeat(wrongCount);
+        document.getElementById('life-display').innerText = lifeStr;
+    }
+
+    function loadQuiz() {
+        if (wrongCount >= MAX_WRONG) return showGameOver();
+        if (currentIdx >= shuffledData.length) return showGameOver(true);
+
+        isProcessing = false;
+        document.getElementById('question').innerText = shuffledData[currentIdx].q;
+        document.getElementById('user-input').value = "";
+        document.getElementById('user-input').disabled = false;
+        document.getElementById('status-msg').innerText = "";
+        document.getElementById('user-input').focus();
+        resetTimer();
+    }
+
+    function checkAnswer() {
+        if (isPaused || isProcessing) return;
+        const userInput = document.getElementById('user-input').value;
+        const msg = document.getElementById('status-msg');
+        const currentData = shuffledData[currentIdx];
+        const cleanInput = userInput.replace(/\s+/g, '').toLowerCase();
+        const cleanAnswer = currentData.a.replace(/\s+/g, '').toLowerCase();
+
+        isProcessing = true;
+        clearInterval(timerInterval);
+
+        if (cleanInput === cleanAnswer) {
+            score += 10;
+            document.getElementById('score').innerText = score;
+            msg.innerHTML = "✨ 정답입니다!";
+            msg.className = "msg-correct";
+            playSnd(sndCorrect);
+            setTimeout(nextQuiz, 1000);
+        } else {
+            handleWrongAnswer();
+        }
+    }
+
+    function handleWrongAnswer(isPass = false) {
+        if (!isPass) {
+            wrongCount++;
+            updateLifeUI();
+            playSnd(sndWrong);
+        }
+        clearInterval(timerInterval);
+        isProcessing = true;
+        const msg = document.getElementById('status-msg');
+        const currentData = shuffledData[currentIdx];
+        msg.innerHTML = (isPass ? `⏩ 패스! ` : `❌ 틀렸습니다! `) + `<span class="answer-highlight">${currentData.a}</span>`;
+        msg.className = "msg-wrong";
+        if (wrongCount >= MAX_WRONG) setTimeout(showGameOver, 1500);
+        else setTimeout(nextQuiz, 2000);
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        timeLeft = maxTime;
+        updateTimerUI();
+        timerInterval = setInterval(() => {
+            if (isPaused) return;
+            timeLeft -= 0.1;
+            updateTimerUI();
+            if (timeLeft > 0 && timeLeft <= 3 && Math.abs(timeLeft % 1) < 0.1) playSnd(sndTick);
+            if (timeLeft <= 0) handleWrongAnswer();
+        }, 100);
+    }
+
+    function showGameOver(isWin = false) {
+        clearInterval(timerInterval);
+        const screen = document.getElementById('result-screen');
+        screen.style.display = 'flex';
+        document.getElementById('final-score').innerText = `최종 점수: ${score}`;
+        if (isWin) {
+            document.getElementById('result-title').innerText = "🏆 세계 정복 완료!";
+            playSnd(sndSuccess);
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        }
+    }
+
+    function updateTimerUI() {
+        document.getElementById('timer-text').innerText = `⏱️ ${timeLeft.toFixed(1)}s`;
+        document.getElementById('timer-bar').style.width = (timeLeft / maxTime) * 100 + "%";
+    }
+
+    function nextQuiz() { currentIdx++; loadQuiz(); }
+    function adjustTime(amount) { maxTime = Math.max(3, maxTime + amount); timeLeft = maxTime; updateTimerUI(); }
+    function togglePause() {
+        if (isProcessing) return;
+        isPaused = !isPaused;
+        document.getElementById('pause-btn').innerText = isPaused ? "▶ 시작" : "⏸ 정지";
+        document.getElementById('user-input').disabled = isPaused;
+    }
+
+    document.getElementById('user-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkAnswer(); });
+    window.onload = () => { shuffleQuiz(); updateLifeUI(); loadQuiz(); };
+</script>
+</body>
+</html>
