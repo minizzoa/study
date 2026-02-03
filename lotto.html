@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>랜덤 뽑기 - 유니버설 에디션</title>
+    <title>랜덤 뽑기 - 다이내믹 에디션</title>
     <style>
         :root {
             --bg-dark: #0a0f14;
@@ -12,248 +12,201 @@
         }
 
         body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
+            font-family: 'Pretendard', sans-serif;
             background: var(--bg-dark);
             margin: 0;
-            padding: 20px 10px;
+            padding: 10px 10px 30px 10px;
             color: white;
             display: flex;
             flex-direction: column;
-            align-items: center; /* 수평 중앙 정렬 */
+            align-items: center; 
             min-height: 100vh;
-            overflow-x: hidden;
-            box-sizing: border-box;
         }
 
         h2 { 
-            margin: 10px 0 20px 0; 
-            font-size: clamp(1.2rem, 5vw, 1.8rem); /* 화면 크기에 따른 가변 폰트 */
+            margin: 5px 0 10px 0; 
+            font-size: 1.3rem;
             color: var(--neon-mint); 
-            text-shadow: 0 0 15px var(--mint-glow);
-            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--mint-glow);
             text-align: center;
         }
 
-        /* 결과 리스트: PC/모바일 공용 중앙 정렬 */
         .results-container {
-            height: 70px;
-            width: 95%;
-            max-width: 600px; /* PC에서 너무 길어지지 않게 제한 */
-            display: flex;
-            align-items: center;
-            justify-content: center; /* 내부 아이템 중앙 정렬 */
-            gap: 12px;
-            padding: 5px 15px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 40px;
-            border: 2px solid var(--neon-mint);
-            margin-bottom: 25px;
-            overflow-x: auto;
-            white-space: nowrap;
+            height: 55px; width: 95%; max-width: 500px;
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; padding: 5px 10px; background: rgba(0,0,0,0.4);
+            border-radius: 30px; border: 1px solid var(--neon-mint);
+            margin-bottom: 15px; overflow-x: auto;
         }
-        /* 결과가 많아질 때만 왼쪽 정렬로 자연스럽게 전환 */
-        .results-container:has(.result-ball:nth-child(7)) {
-            justify-content: flex-start;
-        }
-        .results-container::-webkit-scrollbar { display: none; }
 
         .result-ball {
-            min-width: 48px; height: 48px; border-radius: 50%;
+            min-width: 38px; height: 38px; border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            font-size: 1.3rem; font-weight: 900; color: #000;
-            flex-shrink: 0;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            font-size: 1rem; font-weight: 900; color: #000; flex-shrink: 0;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
-        /* 메인 콘텐츠: 항상 중앙 정렬 */
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 30px;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .lucky-machine { 
-            position: relative; 
-            transform: scale(1);
-            transition: transform 0.3s;
-        }
-        @media (max-width: 480px) { .lucky-machine { transform: scale(0.85); } }
+        /* 머신 및 공 애니메이션 */
+        .lucky-machine { position: relative; margin-bottom: 10px; }
 
         .glass-dome {
-            width: 280px; height: 280px;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), rgba(255,255,255,0.02));
-            border-radius: 50%; border: 3px solid rgba(255,255,255,0.2);
+            width: 200px; height: 200px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border-radius: 50%; border: 2px solid rgba(255,255,255,0.2);
             position: relative; overflow: hidden; z-index: 5;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.6);
-        }
-
-        .machine-body {
-            width: 260px; height: 150px;
-            background: linear-gradient(135deg, var(--neon-mint), #00cca3);
-            border-radius: 0 0 60px 60px; margin-top: -45px;
-            position: relative; z-index: 1;
-            border: 4px solid #00dfb2;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px var(--mint-glow);
-        }
-
-        .exit-slot {
-            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            width: 90px; height: 90px; background: #121212;
-            border-radius: 50%; border: 4px solid #1a1a1a;
-            box-shadow: inset 0 5px 25px rgba(0,0,0,1);
-        }
-
-        #activeBallSlot {
-            position: absolute; 
-            bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 110px; height: 110px; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 3.5rem; font-weight: 900; color: #000;
-            opacity: 0; z-index: 999;
-            filter: drop-shadow(0 0 25px rgba(255,255,255,0.7));
-            pointer-events: none;
-        }
-
-        #activeBallSlot.drop { 
-            opacity: 1; 
-            transform: translate(-50%, -170px) scale(1.1);
-            transition: 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
         }
 
         .mixing-ball {
-            position: absolute; width: 36px; height: 36px; border-radius: 50%;
-            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3);
+            position: absolute; width: 24px; height: 24px; border-radius: 50%;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4);
             z-index: 6;
+            transition: transform 0.1s;
         }
 
-        /* 하단 설정창: PC에서도 보기 좋게 폭 제한 및 중앙 정렬 */
+        /* 역동적 움직임 핵심 애니메이션 */
+        @keyframes shuffle {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(var(--rx), var(--ry)) rotate(90deg); }
+            50% { transform: translate(var(--bx), var(--by)) rotate(180deg); }
+            75% { transform: translate(var(--gx), var(--gy)) rotate(270deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+
+        .is-mixing .mixing-ball {
+            animation: shuffle var(--speed) infinite linear;
+        }
+
+        .machine-body {
+            width: 180px; height: 100px;
+            background: linear-gradient(135deg, var(--neon-mint), #00cca3);
+            border-radius: 0 0 50px 50px; margin: -30px auto 0;
+            position: relative; z-index: 1; border: 3px solid #00dfb2;
+        }
+
+        .exit-slot {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            width: 60px; height: 60px; background: #121212;
+            border-radius: 50%; border: 3px solid #1a1a1a;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,1);
+        }
+
+        #activeBallSlot {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 80px; height: 80px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 2.5rem; font-weight: 900; color: #000;
+            opacity: 0; z-index: 999; filter: drop-shadow(0 0 15px #fff);
+        }
+
+        #activeBallSlot.drop { 
+            opacity: 1; transform: translate(-50%, -130px) scale(1.1);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
         .sidebar {
-            background: rgba(255,255,255,0.07);
-            padding: 25px;
-            border-radius: 30px;
-            width: 90%;
-            max-width: 450px; /* PC에서 너무 퍼지지 않도록 */
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            backdrop-filter: blur(15px);
+            background: rgba(255,255,255,0.07); padding: 15px;
+            border-radius: 25px; width: 90%; max-width: 400px;
+            display: flex; flex-direction: column; gap: 12px;
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
 
-        .setting-row {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-
-        .setting-item { flex: 1; display: flex; flex-direction: column; gap: 8px; max-width: 150px; }
-        .setting-item label { font-size: 0.85rem; color: #00ffcc; font-weight: bold; text-align: center; }
+        .setting-row { display: flex; gap: 10px; }
+        .setting-item { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        .setting-item label { font-size: 0.75rem; color: var(--neon-mint); text-align: center; }
         .setting-item input { 
-            width: 100%;
-            padding: 12px 0; border-radius: 12px; border: none; background: #1a1a1a; 
-            color: var(--neon-mint); font-size: 1.4rem; text-align: center; font-weight: 900;
-            outline: none; border: 1px solid transparent; transition: 0.3s;
+            width: 100%; padding: 10px 0; border-radius: 10px; border: none; background: #1a1a1a; 
+            color: var(--neon-mint); font-size: 1.2rem; text-align: center; font-weight: 800;
         }
-        .setting-item input:focus { border-color: var(--neon-mint); box-shadow: 0 0 10px var(--mint-glow); }
 
         #drawBtn {
-            width: 100%; padding: 18px; font-size: 1.6rem; font-weight: 900;
-            background: var(--neon-mint); color: #000; border: none; border-radius: 18px;
-            box-shadow: 0 0 25px var(--mint-glow); cursor: pointer;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%; padding: 15px; font-size: 1.3rem; font-weight: 900;
+            background: var(--neon-mint); color: #000; border: none; border-radius: 15px;
+            box-shadow: 0 0 15px var(--mint-glow); cursor: pointer;
         }
-        #drawBtn:hover { transform: translateY(-3px); filter: brightness(1.1); }
-        #drawBtn:active { transform: scale(0.96); }
-        #drawBtn:disabled { background: #333; color: #666; box-shadow: none; cursor: not-allowed; }
 
-        #soundToggle { font-size: 0.9rem; color: #666; text-align: center; cursor: pointer; transition: 0.3s; }
-        #soundToggle:hover { color: var(--neon-mint); }
-
-        @keyframes popIn { 
-            0% { transform: scale(0) rotate(-180deg); opacity: 0; } 
-            100% { transform: scale(1) rotate(0deg); opacity: 1; } 
+        /* 홈 버튼 스타일 (흐름에 따라 제일 아래 배치) */
+        .home-section {
+            margin-top: 30px; padding-bottom: 20px;
         }
+        .btn-home {
+            background: transparent; color: #666; border: 1px solid #333;
+            padding: 10px 30px; border-radius: 25px; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px; cursor: pointer;
+            text-decoration: none; transition: 0.3s;
+        }
+        .btn-home:hover { border-color: var(--neon-mint); color: var(--neon-mint); }
+
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h2>⚡ LUCKY DRAW MACHINE ⚡</h2>
+    <h2>⚡ DYNAMIC LOTTO ⚡</h2>
 
     <div class="results-container" id="results"></div>
 
-    <div class="main-content">
-        <div class="lucky-machine">
-            <div class="glass-dome" id="dome">
-                <div id="ballPit"></div>
-            </div>
-            <div class="machine-body">
-                <div class="exit-slot"></div>
-            </div>
-            <div id="activeBallSlot">?</div>
+    <div class="lucky-machine" id="machineArea">
+        <div class="glass-dome" id="dome">
+            <div id="ballPit"></div>
         </div>
+        <div class="machine-body"><div class="exit-slot"></div></div>
+        <div id="activeBallSlot">?</div>
+    </div>
 
-        <div class="sidebar">
-            <div class="setting-row">
-                <div class="setting-item">
-                    <label>뽑을 개수</label>
-                    <input type="number" id="ballCount" value="6" min="1" max="20" inputmode="numeric">
-                </div>
-                <div class="setting-item">
-                    <label>숫자 범위</label>
-                    <input type="number" id="maxRange" value="45" min="1" inputmode="numeric">
-                </div>
+    <div class="sidebar">
+        <div class="setting-row">
+            <div class="setting-item">
+                <label>뽑을 개수</label>
+                <input type="number" id="ballCount" value="6" min="1" max="20">
             </div>
-            <button id="drawBtn">뽑 기 시 작</button>
-            <div id="soundToggle">🔊 사운드 ON</div>
+            <div class="setting-item">
+                <label>숫자 범위</label>
+                <input type="number" id="maxRange" value="45" min="1">
+            </div>
         </div>
+        <button id="drawBtn">뽑 기 시 작</button>
+        <div id="soundToggle" style="text-align:center; font-size:0.8rem; color:#555; cursor:pointer;">🔊 사운드 ON</div>
+    </div>
+
+    <div class="home-section">
+        <a href="index.html" class="btn-home">🏠 HOME</a>
     </div>
 
     <script>
-        const drawBtn = document.getElementById('drawBtn');
-        const soundToggle = document.getElementById('soundToggle');
-        const resultsContainer = document.getElementById('results');
-        const activeBallSlot = document.getElementById('activeBallSlot');
-        const dome = document.getElementById('dome');
         const ballPit = document.getElementById('ballPit');
+        const dome = document.getElementById('dome');
+        const drawBtn = document.getElementById('drawBtn');
+        const activeBallSlot = document.getElementById('activeBallSlot');
+        const resultsContainer = document.getElementById('results');
 
-        const ballColors = ['#FF006E', '#8338EC', '#00F5D4', '#FFBE0B', '#FB5607', '#3A86FF', '#FF00CC', '#00FF00'];
-        let audioCtx = null;
+        const ballColors = ['#FF006E', '#8338EC', '#00F5D4', '#FFBE0B', '#FB5607', '#3A86FF'];
         let isMuted = false;
 
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-
-        function playSound(freq, dur) {
-            if (!audioCtx || isMuted) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + dur);
-        }
-
-        function initBalls() {
+        function createBalls() {
             ballPit.innerHTML = '';
-            for(let i=0; i<35; i++) {
+            for(let i=0; i<30; i++) {
                 const b = document.createElement('div');
                 b.className = 'mixing-ball';
+                
+                // 역동적인 위치 및 애니메이션 변수 설정
+                const rx = Math.random() * 150 - 75;
+                const ry = Math.random() * 150 - 75;
+                const bx = Math.random() * 150 - 75;
+                const by = Math.random() * 150 - 75;
+                const speed = (0.3 + Math.random() * 0.4) + 's';
+
                 b.style.backgroundColor = ballColors[i % ballColors.length];
-                b.style.left = Math.random() * 240 + 'px';
-                b.style.top = Math.random() * 240 + 'px';
-                b.style.setProperty('--dur', (0.2 + Math.random() * 0.4) + 's');
-                b.style.setProperty('--tx1', (Math.random() * 160 - 80) + 'px');
-                b.style.setProperty('--ty1', (Math.random() * 160 - 80) + 'px');
-                b.style.setProperty('--tx2', (Math.random() * 160 - 80) + 'px');
-                b.style.setProperty('--ty2', (Math.random() * 160 - 80) + 'px');
+                b.style.left = '85px';
+                b.style.top = '85px';
+                b.style.setProperty('--rx', rx + 'px');
+                b.style.setProperty('--ry', ry + 'px');
+                b.style.setProperty('--bx', bx + 'px');
+                b.style.setProperty('--by', by + 'px');
+                b.style.setProperty('--gx', -rx + 'px');
+                b.style.setProperty('--gy', -ry + 'px');
+                b.style.setProperty('--speed', speed);
+                
                 ballPit.appendChild(b);
             }
         }
@@ -262,7 +215,7 @@
             const count = parseInt(document.getElementById('ballCount').value);
             const max = parseInt(document.getElementById('maxRange').value);
             
-            if (count > max) { alert("범위보다 많은 공을 뽑을 수 없습니다."); return; }
+            if (count > max) return alert("범위 오류!");
 
             drawBtn.disabled = true;
             resultsContainer.innerHTML = '';
@@ -271,52 +224,36 @@
             let picked = [];
 
             for (let i = 0; i < count; i++) {
-                playSound(150, 0.1);
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 400)); 
 
                 let num;
                 do { num = Math.floor(Math.random() * max) + 1; } while (picked.includes(num));
                 picked.push(num);
 
-                const ballColor = ballColors[Math.floor(Math.random() * ballColors.length)];
-                const ballGrad = `radial-gradient(circle at 30% 30%, #fff 0%, ${ballColor} 100%)`;
-                
-                activeBallSlot.style.background = ballGrad;
+                const color = ballColors[Math.floor(Math.random() * ballColors.length)];
+                activeBallSlot.style.background = `radial-gradient(circle at 30% 30%, #fff, ${color})`;
                 activeBallSlot.innerText = num;
                 activeBallSlot.classList.add('drop');
-                playSound(600, 0.3);
                 
-                await new Promise(r => setTimeout(r, 1200));
+                await new Promise(r => setTimeout(r, 700));
 
                 const resBall = document.createElement('div');
                 resBall.className = 'result-ball';
-                resBall.style.background = ballGrad;
+                resBall.style.background = `radial-gradient(circle at 30% 30%, #fff, ${color})`;
                 resBall.innerText = num;
                 resultsContainer.appendChild(resBall);
-                
-                // 결과 추가 시 항상 오른쪽 끝으로 스크롤 유지
                 resultsContainer.scrollTo({ left: resultsContainer.scrollWidth, behavior: 'smooth' });
 
                 activeBallSlot.classList.remove('drop');
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 200));
             }
 
             dome.classList.remove('is-mixing');
             drawBtn.disabled = false;
         }
 
-        drawBtn.addEventListener('click', () => {
-            initAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            startDrawing();
-        });
-
-        soundToggle.addEventListener('click', () => {
-            isMuted = !isMuted;
-            soundToggle.innerText = isMuted ? "🔇 사운드 OFF" : "🔊 사운드 ON";
-        });
-
-        initBalls();
+        drawBtn.addEventListener('click', startDrawing);
+        createBalls();
     </script>
 </body>
 </html>
