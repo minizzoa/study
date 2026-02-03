@@ -13,7 +13,8 @@
         
         body { font-family: 'Pretendard', sans-serif; background: var(--secondary); display: flex; justify-content: center; align-items: flex-start; height: 100vh; margin: 0; padding-top: 5vh; overflow: hidden; }
         
-        #app { background: white; width: 92%; max-width: 440px; padding: 25px 20px; border-radius: 35px; box-shadow: 0 15px 0 rgba(0,0,0,0.2); text-align: center; min-height: 420px; }
+        /* 폭죽이 이 박스 안에서만 보이도록 position: relative와 overflow: hidden 설정 */
+        #app { background: white; width: 92%; max-width: 440px; padding: 25px 20px; border-radius: 35px; box-shadow: 0 15px 0 rgba(0,0,0,0.2); text-align: center; min-height: 420px; position: relative; overflow: hidden; }
         
         .app-title { font-size: 2.5rem; font-weight: 900; color: var(--secondary); margin: 0 0 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; letter-spacing: -1.5px; }
 
@@ -22,10 +23,8 @@
         .btn-mini { border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; background: #f1f2f6; font-weight: 600; transition: 0.2s; }
         .btn-mini.active { background: var(--secondary); color: white; }
 
-        /* 스탯 라인 개선: 글자 크기 키움 */
         .stats { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 12px 18px; border-radius: 20px; margin-bottom: 15px; font-weight: 800; font-size: 1.1rem; }
         
-        /* 스탯 내 속도 조절 UI */
         .speed-adj-group { display: flex; align-items: center; gap: 8px; background: white; padding: 4px 10px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
         .btn-adj { border: none; background: none; color: var(--secondary); font-size: 1.3rem; font-weight: 900; cursor: pointer; padding: 0 5px; transition: 0.1s; }
         .btn-adj:active { transform: scale(1.3); }
@@ -40,7 +39,6 @@
         .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
         input { flex: 4; padding: 14px; border: 3px solid #E0DFFD; background-color: #F8F7FF; border-radius: 18px; font-size: 1.2rem; text-align: center; outline: none; transition: 0.3s; color: var(--secondary); font-weight: 600; }
         
-        /* 확인 버튼 글자 크기 확대 */
         .btn-confirm { flex: 1.5; background: var(--primary); border: none; border-radius: 18px; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 0 #E6C235; transition: 0.1s; }
         .btn-confirm:active { transform: translateY(3px); box-shadow: none; }
 
@@ -48,7 +46,7 @@
         .btn-ctrl { background: #dfe6e9; border: none; padding: 12px; border-radius: 18px; font-weight: 600; cursor: pointer; flex: 1; font-size: 1rem; box-shadow: 0 3px 0 #b2bec3; }
         .btn-pause { background: #ff7675; color: white; box-shadow: 0 3px 0 #d63031; }
         
-        .result-view { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 30px 0; }
+        .result-view { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 30px 0; z-index: 10; position: relative; }
         @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
@@ -95,7 +93,19 @@
 <script>
     let score = 0, currentIndex = 0, soundEnabled = true, isPaused = false;
     let category = 'ENG_TO_KOR', currentQuizMode = 'ENG_TO_KOR', baseTime = 100, timeLeft = 100, timerInterval;
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const sndCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+    const sndWrong = new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3');
+    const sndTick = new Audio('https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3'); 
+    const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
+    sndTick.volume = 0.3;
+
+    function playSnd(audioObj) {
+        if (soundEnabled) {
+            audioObj.currentTime = 0;
+            audioObj.play().catch(e => {});
+        }
+    }
 
     window.onload = () => { if(typeof wordData !== 'undefined') nextQuestion(); };
 
@@ -103,9 +113,7 @@
         let newTime = baseTime + delta;
         if (newTime >= 10 && newTime <= 300) { 
             baseTime = newTime;
-            const displayVal = (baseTime / 10).toFixed(1) + 's';
-            document.getElementById('limit-display').innerText = `⏱ ${displayVal}`;
-            // 속도 변경 시 현재 진행 중인 타이머도 즉시 리셋하고 싶다면 startTimer() 호출 가능
+            document.getElementById('limit-display').innerText = `⏱ ${(baseTime / 10).toFixed(1)}s`;
         }
     }
 
@@ -128,10 +136,7 @@
             if (!isPaused) {
                 timeLeft--;
                 updateTimerBar();
-                if (timeLeft % 10 === 0 && soundEnabled) {
-                    const pitch = timeLeft < 30 ? 800 : 400;
-                    playTone(pitch, 0.02, 0.05, 'sine');
-                }
+                if (timeLeft % 10 === 0 && timeLeft > 0) playSnd(sndTick);
                 if (timeLeft <= 0) { clearInterval(timerInterval); handleWrongProcess('⏰ 시간초과!'); }
             }
         }, 100);
@@ -141,7 +146,7 @@
 
     function handleWrongProcess(msg) {
         clearInterval(timerInterval);
-        playTone(150, 0.2, 0.4, 'sawtooth');
+        playSnd(sndWrong);
         triggerFeedback(msg, 'var(--error)');
         const currentWord = wordData[currentIndex];
         const correctAnswer = currentQuizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
@@ -165,16 +170,21 @@
 
     function checkAnswer() {
         if (document.getElementById('user-input').disabled || isPaused) return;
-        const userInput = document.getElementById('user-input').value.trim().toLowerCase();
+        
+        // 정답 체크 로직 수정: 모든 공백 제거 후 비교
+        const userInput = document.getElementById('user-input').value.replace(/\s+/g, '').toLowerCase();
         const currentWord = wordData[currentIndex];
         const answerRaw = currentQuizMode === 'ENG_TO_KOR' ? currentWord.meaning : currentWord.english;
-        const correctAnswers = answerRaw.split(',').map(s => s.trim().toLowerCase());
+        
+        // 정답지 리스트도 공백 제거하여 배열화
+        const correctAnswers = answerRaw.split(',').map(s => s.replace(/\s+/g, '').toLowerCase());
+        
         if (correctAnswers.includes(userInput)) {
             clearInterval(timerInterval);
             score += 10;
             document.getElementById('score').innerText = score;
             triggerFeedback('⭕ 정답입니다!', 'var(--success)');
-            playTone(600, 0.1, 0.2, 'sine');
+            playSnd(sndCorrect);
             setTimeout(nextQuestion, 800);
         } else { handleWrongProcess('❌ 틀렸어요!'); }
     }
@@ -190,11 +200,30 @@
                 <button class="btn-confirm" style="padding: 15px 45px; font-size: 1.2rem; width: auto;" onclick="location.reload()">다시 시작하기</button>
             </div>
         `;
-        [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 0.1, 0.5, 'triangle'), i * 150));
+        playSnd(sndSuccess);
+
+        // 폭죽이 흰색 박스(#app) 안에서만 터지도록 설정
+        const appBox = document.getElementById('app');
         const end = Date.now() + 3000;
+
         (function frame() {
-            confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#5F56D6', '#FFD93D'] });
-            confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#5F56D6', '#FFD93D'] });
+            // origin y값을 0.7 정도로 설정하여 박스 하단에서 솟구치게 함
+            confetti({
+                particleCount: 3,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0.1, y: 0.8 },
+                colors: ['#5F56D6', '#FFD93D'],
+                useWorker: true
+            });
+            confetti({
+                particleCount: 3,
+                angle: 120,
+                spread: 55,
+                origin: { x: 0.9, y: 0.8 },
+                colors: ['#5F56D6', '#FFD93D'],
+                useWorker: true
+            });
             if (Date.now() < end) requestAnimationFrame(frame);
         }());
     }
@@ -208,17 +237,7 @@
 
     function passQuestion() { if (!document.getElementById('user-input').disabled) handleWrongProcess('PASS ⏩'); }
     function triggerFeedback(text, color) { const area = document.getElementById('feedback-area'); area.innerText = text; area.style.color = color; }
-    function playTone(freq, vol, duration, type = 'sine') {
-        if(!soundEnabled) return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type; osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-        osc.start(); osc.stop(audioCtx.currentTime + duration);
-    }
+
     document.getElementById('sound-toggle').onclick = function() { soundEnabled = !soundEnabled; this.innerText = soundEnabled ? '🔊' : '🔈'; };
     document.getElementById('user-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') checkAnswer(); });
 </script>
