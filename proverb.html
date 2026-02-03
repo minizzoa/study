@@ -8,7 +8,6 @@
     <script src="data.js"></script>
     <style>
         :root {
-            /* 컬러 테마 변경: 민트 & 네이비 */
             --main-bg: #00bfa5;
             --container-bg: #ffffff;
             --accent-blue: #1a237e;
@@ -23,61 +22,82 @@
         body {
             margin: 0; background-color: var(--main-bg);
             font-family: 'Pretendard', sans-serif;
-            display: flex; justify-content: center; align-items: center; height: 100vh;
+            display: flex; justify-content: center; 
+            align-items: flex-start; 
+            padding-top: 30px; 
+            height: 100vh;
         }
 
         .container {
-            width: 90%; max-width: 450px; background: var(--container-bg);
-            border-radius: 40px; padding: 40px 25px; text-align: center;
+            width: 95%; max-width: 550px; /* 한 줄 표시를 위해 가로폭을 약간 넓힘 */
+            background: var(--container-bg);
+            border-radius: 40px; padding: 30px 20px; text-align: center;
             box-shadow: 0 15px 35px rgba(0,0,0,0.15); position: relative;
         }
 
         .title {
-            color: var(--accent-blue); font-size: 2.4rem; font-weight: 900;
-            margin-bottom: 25px; letter-spacing: -1px;
+            color: var(--accent-blue); font-size: 2rem; font-weight: 900;
+            margin-bottom: 20px; letter-spacing: -1px;
         }
 
         .dashboard {
-            background: #f1f8f7; border-radius: 20px; padding: 12px 20px;
+            background: #f1f8f7; border-radius: 20px; padding: 10px 20px;
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 15px; font-weight: bold; font-size: 1.1rem;
+            margin-bottom: 15px; font-weight: bold; font-size: 1rem;
         }
 
-        /* 사운드 제어 버튼 스타일 */
         .sound-toggle {
-            cursor: pointer; font-size: 1.4rem; display: flex; align-items: center;
+            cursor: pointer; font-size: 1.2rem; display: flex; align-items: center;
             background: none; border: none; padding: 0 5px;
         }
 
         .timer-control { display: flex; align-items: center; gap: 8px; color: var(--accent-blue); }
         .btn-adj { 
-            width: 28px; height: 28px; border-radius: 50%; border: none; 
+            width: 26px; height: 26px; border-radius: 50%; border: none; 
             background: var(--light-mint); color: var(--accent-blue); 
             font-weight: bold; cursor: pointer; 
         }
 
         .timer-container {
-            width: 100%; height: 10px; background: var(--gray);
-            border-radius: 5px; margin-bottom: 35px; overflow: hidden;
+            width: 100%; height: 8px; background: var(--gray);
+            border-radius: 5px; margin-bottom: 25px; overflow: hidden;
         }
 
         #timer-bar { width: 100%; height: 100%; background: var(--main-bg); transition: width 0.1s linear; }
 
-        .quiz-content { font-size: 2.1rem; font-weight: 800; color: var(--accent-blue); margin: 30px 0; min-height: 80px; word-break: keep-all; }
+        .quiz-content { 
+            font-size: 1.8rem; font-weight: 800; color: var(--accent-blue); 
+            margin: 20px 0; min-height: 60px; word-break: keep-all; 
+        }
 
         .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .input-box {
-            flex: 1; padding: 18px; font-size: 1.2rem; border: 2px solid var(--light-mint);
+            flex: 1; padding: 15px; font-size: 1.3rem; border: 2px solid var(--light-mint);
             border-radius: 15px; background: var(--light-mint); outline: none; text-align: center;
+            font-weight: 800; color: var(--accent-blue);
         }
-        .btn-confirm { width: 80px; background: var(--yellow); border-radius: 15px; font-weight: bold; border: none; cursor: pointer; }
+        .btn-confirm { width: 70px; background: var(--yellow); border-radius: 15px; font-weight: bold; border: none; cursor: pointer; }
 
-        #status-msg { height: 25px; font-weight: bold; margin-bottom: 20px; font-size: 1.1rem; }
-        .msg-correct { color: var(--green); }
-        .msg-wrong { color: var(--red); }
+        #status-msg { 
+            min-height: 80px; font-weight: 800; margin-bottom: 20px; 
+            font-size: 1.1rem; 
+            display: flex; align-items: center; justify-content: center;
+            white-space: nowrap; /* 텍스트를 한 줄로 강제 고정 */
+            overflow: hidden;
+        }
+        .msg-correct { color: var(--green); font-size: 1.5rem; }
+        
+        .msg-wrong { color: #333; } 
+        .answer-highlight { 
+            color: var(--red); 
+            font-size: 1.5rem; 
+            font-weight: 900;
+            margin: 0 5px;
+            display: inline; /* 인라인으로 변경하여 한 줄 유지 */
+        }
 
         .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        button.action-btn { border: none; border-radius: 20px; padding: 18px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        button.action-btn { border: none; border-radius: 20px; padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; }
         .btn-pass { background: var(--gray); color: var(--dark-gray); }
         .btn-stop { background: var(--red); color: white; }
 
@@ -132,18 +152,16 @@
 <script>
     let currentIdx = 0, score = 0, timeLeft = 15, maxTime = 15;
     let timerInterval, isPaused = false, isProcessing = false;
-    let isMuted = false; // 사운드 상태 변수
+    let isMuted = false;
     let shuffledData = [];
 
     const GOAL_SCORE = 100;
 
-    // 사운드 설정
     const sndCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
     const sndWrong = new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3');
     const sndTick = new Audio('https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3'); 
     const sndSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
 
-    // 사운드 재생 통합 함수
     function playSnd(sound) {
         if (!isMuted) {
             sound.currentTime = 0;
@@ -178,7 +196,8 @@
         
         const userInput = document.getElementById('user-input').value;
         const msg = document.getElementById('status-msg');
-        const correctAnswer = shuffledData[currentIdx].a;
+        const currentData = shuffledData[currentIdx];
+        const correctAnswer = currentData.a;
 
         const cleanInput = userInput.replace(/\s+/g, '');
         const cleanAnswer = correctAnswer.replace(/\s+/g, '');
@@ -189,7 +208,7 @@
         if (cleanInput === cleanAnswer) {
             score += 10;
             document.getElementById('score').innerText = score;
-            msg.innerText = "🎉 정답입니다!";
+            msg.innerHTML = "🎉 정답입니다!";
             msg.className = "msg-correct";
             playSnd(sndCorrect);
 
@@ -199,10 +218,11 @@
                 setTimeout(nextQuiz, 1000); 
             }
         } else {
-            msg.innerText = `❌ 틀렸습니다! 정답은 [${correctAnswer}]`;
+            const highlightedSentence = currentData.q.replace("[  ]", `<span class="answer-highlight">${correctAnswer}</span>`);
+            msg.innerHTML = `❌ ${highlightedSentence}`;
             msg.className = "msg-wrong";
             playSnd(sndWrong);
-            setTimeout(nextQuiz, 2000);
+            setTimeout(nextQuiz, 3000);
         }
     }
 
@@ -236,10 +256,12 @@
                 clearInterval(timerInterval);
                 isProcessing = true;
                 const msg = document.getElementById('status-msg');
-                msg.innerText = `⏰ 시간 초과! 정답은 [${shuffledData[currentIdx].a}]`;
+                const currentData = shuffledData[currentIdx];
+                const highlightedSentence = currentData.q.replace("[  ]", `<span class="answer-highlight">${currentData.a}</span>`);
+                msg.innerHTML = `⏰ 시간 초과! ${highlightedSentence}`;
                 msg.className = "msg-wrong";
                 playSnd(sndWrong);
-                setTimeout(nextQuiz, 2000);
+                setTimeout(nextQuiz, 3000);
             }
         }, 100);
     }
