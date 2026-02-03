@@ -113,7 +113,7 @@
 <body>
 
 <div class="container">
-    <div class="title">한국사 퀴즈</div>
+    <div class="title">📚한국사 퀴즈</div>
     
     <div class="dashboard">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -249,7 +249,7 @@
             if (isPaused) return;
             timeLeft -= 0.1;
             updateTimerUI();
-            if (timeLeft > 0 && timeLeft <= 3 && Math.abs(timeLeft % 1) < 0.1) playSnd(sndTick);
+            if (timeLeft > 0 && Math.abs(timeLeft % 1) < 0.1) playSnd(sndTick);
             if (timeLeft <= 0) handleWrongAnswer();
         }, 100);
     }
