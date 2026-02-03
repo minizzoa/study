@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>비행기 슈팅 게임 - 강화판</title>
+    <style>
+        body { margin: 0; background: #222; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; color: white; font-family: 'Malgun Gothic', sans-serif; }
+        canvas { background: #000; border: 3px solid #00ff00; display: block; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+        .controls { margin-top: 15px; display: flex; gap: 10px; }
+        button { padding: 10px 20px; font-size: 14px; cursor: pointer; border: none; border-radius: 5px; background: #444; color: white; transition: 0.2s; }
+        button:hover { background: #00ff00; color: black; }
+        .info { position: absolute; top: 20px; font-size: 24px; font-weight: bold; text-shadow: 2px 2px #000; }
+        .guide { margin-top: 10px; color: #aaa; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="info">SCORE: <span id="score">0</span></div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+    <div class="controls">
+        <button id="startBtn">게임 시작</button>
+        <button id="pauseBtn">일시 정지</button>
+        <button id="muteBtn">사운드 ON</button>
+    </div>
+    <div class="guide">좌우 방향키: 이동 | 스페이스바: 총알 발사</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+
+    let score = 0;
+    let isPlaying = false;
+    let isMuted = false;
+    
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(freq, type, duration, vol = 0.1) {
+        if (isMuted) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    const player = { x: 180, y: 530, w: 40, h: 40, speed: 7 };
+    let bullets = [];
+    let enemies = [];
+    let items = [];
+    let keys = {};
+
+    window.addEventListener('keydown', e => {
+        keys[e.code] = true;
+        // 스페이스바를 누르면 총알 생성
+        if (e.code === 'Space' && isPlaying) {
+            bullets.push({ x: player.x + player.w/2 - 2, y: player.y, w: 4, h: 10 });
+            playSound(400, 'square', 0.1, 0.05); // 발사음
+        }
+    });
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+        if (!isPlaying) {
+            score = 10; // 시작 점수 증정 (0점 즉시 종료 방지)
+            updateScore();
+            enemies = [];
+            items = [];
+            bullets = [];
+            isPlaying = true;
+            gameLoop();
+        }
+    });
+
+    document.getElementById('pauseBtn').addEventListener('click', () => isPlaying = !isPlaying);
+    document.getElementById('muteBtn').addEventListener('click', (e) => {
+        isMuted = !isMuted;
+        e.target.innerText = isMuted ? "사운드 OFF" : "사운드 ON";
+    });
+
+    function updateScore() {
+        scoreElement.innerText = score;
+        if (score <= 0) {
+            score = 0;
+            scoreElement.innerText = score;
+            setTimeout(() => {
+                alert("Game Over! 점수가 0이 되었습니다.");
+                location.reload();
+            }, 10);
+            isPlaying = false;
+        }
+    }
+
+    function update() {
+        if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+        if (keys['ArrowRight'] && player.x < canvas.width - player.w) player.x += player.speed;
+
+        // 총알 이동 및 처리
+        bullets.forEach((b, i) => {
+            b.y -= 10;
+            if (b.y < 0) bullets.splice(i, 1);
+        });
+
+        // 적 처리
+        if (Math.random() < 0.03) enemies.push({ x: Math.random() * (canvas.width - 30), y: -30, w: 30, h: 30 });
+        enemies.forEach((en, ei) => {
+            en.y += 3;
+            
+            // 총알 vs 적 충돌
+            bullets.forEach((b, bi) => {
+                if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
+                    enemies.splice(ei, 1);
+                    bullets.splice(bi, 1);
+                    score += 5;
+                    updateScore();
+                    playSound(600, 'sine', 0.1); // 적 처치음
+                }
+            });
+
+            // 비행기 vs 적 충돌 (데미지)
+            if (player.x < en.x + en.w && player.x + player.w > en.x && player.y < en.y + en.h && player.y + player.h > en.y) {
+                enemies.splice(ei, 1);
+                score -= 50; // 부딪히면 점수 깎임
+                updateScore();
+                playSound(100, 'sawtooth', 0.3); // 부상음
+            }
+            if (en.y > canvas.height) enemies.splice(ei, 1);
+        });
+
+        // 아이템 처리
+        if (Math.random() < 0.01) items.push({ x: Math.random() * (canvas.width - 20), y: -20, w: 20, h: 20 });
+        items.forEach((it, ii) => {
+            it.y += 2;
+            if (player.x < it.x + it.w && player.x + player.w > it.x && player.y < it.y + it.h && player.y + player.h > it.y) {
+                items.splice(ii, 1);
+                score += 20;
+                updateScore();
+                playSound(1000, 'sine', 0.2);
+            }
+        });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 플레이어
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+        
+        // 총알
+        ctx.fillStyle = '#fff';
+        bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+        // 적
+        ctx.fillStyle = '#ff4444';
+        enemies.forEach(en => ctx.fillRect(en.x, en.y, en.w, en.h));
+
+        // 아이템
+        ctx.fillStyle = '#ffff00';
+        items.forEach(it => {
+            ctx.beginPath();
+            ctx.arc(it.x + 10, it.y + 10, 10, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function gameLoop() {
+        if (!isPlaying) return;
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+</script>
+</body>
+</html>

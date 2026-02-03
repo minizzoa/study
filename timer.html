@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Pro Timer - Web Audio Edition</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --card-bg: #121212;
+            --neon-mint: #2effc3;
+            --neon-mint-glow: rgba(46, 255, 195, 0.4);
+            --urgent-red: #ff3131;
+            --track-color: #1a1a1a;
+        }
+
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background: var(--bg-color); 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; color: white;
+        }
+
+        .container { 
+            background: var(--card-bg); padding: 40px; border-radius: 40px; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); 
+            text-align: center; width: 420px; position: relative;
+            border: 1px solid #222;
+        }
+
+        .timer-visual { position: relative; width: 320px; height: 320px; margin: 20px auto; }
+        #timerCanvas { border-radius: 50%; }
+        
+        #displayWrapper { 
+            position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            width: 100%; z-index: 10; 
+            pointer-events: none;
+        }
+        
+        #digitalTime { 
+            font-size: 6rem; font-weight: 900; 
+            color: #ffffff;
+            letter-spacing: -2px;
+            text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000, 0 0 20px rgba(0,0,0,1); 
+        }
+        
+        .text-urgent { color: #fffb00 !important; animation: pulse-urgent 0.5s infinite; }
+        @keyframes pulse-urgent { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        #finishText {
+            display: none; font-weight: 900; color: var(--neon-mint);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            white-space: nowrap; font-size: 4.5rem;
+            text-shadow: 0 0 15px #000, 0 0 30px var(--neon-mint);
+        }
+
+        .controls { margin-top: 30px; }
+        .input-box {
+            width: 80px; background: #000; color: var(--neon-mint); 
+            border: 1px solid #333; padding: 12px; font-size: 1.6rem; 
+            border-radius: 12px; text-align: center; font-weight: 800;
+            outline: none;
+        }
+
+        .btn-group { display: flex; gap: 12px; margin-top: 30px; }
+        button { flex: 1; padding: 18px; border: none; border-radius: 18px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
+        #startBtn { background: var(--neon-mint); color: #000; box-shadow: 0 0 15px var(--neon-mint-glow); }
+        #stopBtn { background: #333; color: white; display: none; }
+        #resetBtn { background: #1a1a1a; color: #888; border: 1px solid #333; }
+        .sound-status { margin-top: 25px; color: #444; cursor: pointer; font-size: 0.9rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="color:var(--neon-mint); font-weight:800; letter-spacing:2px; margin-bottom:10px;">NEON TIMER</div>
+    <div class="timer-visual">
+        <canvas id="timerCanvas" width="320" height="320"></canvas>
+        <div id="displayWrapper">
+            <div id="digitalTime">00:00</div>
+            <div id="finishText">종료!</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:20px; color:#666; font-weight: bold;">
+            <input type="number" id="inputMin" value="1" min="0" class="input-box"> 분
+            <input type="number" id="inputSec" value="0" min="0" max="59" class="input-box"> 초
+        </div>
+        <div class="btn-group">
+            <button id="startBtn">시작</button>
+            <button id="stopBtn">일시정지</button>
+            <button id="resetBtn">초기화</button>
+        </div>
+    </div>
+    <div class="sound-status" id="soundToggle">🔊 소리 켜짐</div>
+</div>
+
+<script>
+    // --- [사운드 엔진 설정] ---
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playTone(freq, type, duration, volume = 0.1) {
+        if (!audioCtx || isMuted) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = type; // 'sine', 'square', 'sawtooth', 'triangle'
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // 소리 정의
+    const sounds = {
+        tick: () => playTone(800, 'sine', 0.05, 0.05),     // 짧은 클릭음
+        warning: () => playTone(1200, 'triangle', 0.1, 0.1), // 조금 높은 경고음
+        alarm: () => {                                     // 종료 알람 (화음)
+            playTone(523.25, 'square', 0.5, 0.1); 
+            playTone(659.25, 'square', 0.5, 0.1); 
+            playTone(783.99, 'square', 0.5, 0.1); 
+        }
+    };
+
+    // --- [타이머 로직] ---
+    const canvas = document.getElementById('timerCanvas');
+    const ctx = canvas.getContext('2d');
+    const digitalTime = document.getElementById('digitalTime');
+    const finishText = document.getElementById('finishText');
+    const inputMin = document.getElementById('inputMin');
+    const inputSec = document.getElementById('inputSec');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const soundToggle = document.getElementById('soundToggle');
+
+    let totalSeconds = 0;
+    let remainingSeconds = 0;
+    let timerId = null;
+    let isMuted = false;
+
+    function drawTimer(ratio) {
+        const cx = 160, cy = 160, radius = 158;
+        ctx.clearRect(0, 0, 320, 320);
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#151515";
+        ctx.fill();
+
+        if (ratio > 0) {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            const startAngle = -Math.PI / 2;
+            const endAngle = startAngle + (Math.PI * 2 * ratio);
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.fillStyle = (remainingSeconds <= 5) ? "rgba(255, 49, 49, 0.85)" : "rgba(46, 255, 195, 0.85)";
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = (remainingSeconds <= 5) ? "#ff3131" : "#2effc3";
+            ctx.stroke();
+        }
+    }
+
+    function updateDisplay() {
+        const m = Math.floor(remainingSeconds / 60);
+        const s = remainingSeconds % 60;
+        digitalTime.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        
+        if (remainingSeconds <= 5 && remainingSeconds > 0) {
+            digitalTime.classList.add('text-urgent');
+        } else {
+            digitalTime.classList.remove('text-urgent');
+        }
+        
+        const progressRatio = (totalSeconds - remainingSeconds) / totalSeconds;
+        drawTimer(progressRatio);
+    }
+
+    startBtn.addEventListener('click', () => {
+        initAudio(); // 클릭 시 오디오 엔진 활성화
+        if (!timerId) {
+            totalSeconds = (parseInt(inputMin.value) || 0) * 60 + (parseInt(inputSec.value) || 0);
+            if (totalSeconds <= 0) return;
+            if (remainingSeconds <= 0) remainingSeconds = totalSeconds;
+        }
+        
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'block';
+        finishText.style.display = 'none';
+        digitalTime.style.display = 'block';
+
+        timerId = setInterval(() => {
+            remainingSeconds--;
+            updateDisplay();
+            
+            if (remainingSeconds > 5) {
+                sounds.tick();
+            } else if (remainingSeconds <= 5 && remainingSeconds > 0) {
+                sounds.warning();
+            }
+
+            if (remainingSeconds <= 0) {
+                clearInterval(timerId);
+                timerId = null;
+                sounds.alarm();
+                digitalTime.style.display = 'none';
+                finishText.style.display = 'block';
+                stopBtn.style.display = 'none';
+                startBtn.style.display = 'block';
+                drawTimer(1);
+            }
+        }, 1000);
+    });
+
+    stopBtn.addEventListener('click', () => {
+        clearInterval(timerId);
+        timerId = null;
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+    });
+
+    resetBtn.addEventListener('click', () => {
+        clearInterval(timerId);
+        timerId = null;
+        remainingSeconds = 0;
+        totalSeconds = 0;
+        digitalTime.innerText = "00:00";
+        digitalTime.style.display = 'block';
+        finishText.style.display = 'none';
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+        drawTimer(0);
+    });
+
+    soundToggle.addEventListener('click', () => {
+        isMuted = !isMuted;
+        soundToggle.innerText = isMuted ? "🔇 소리 끔" : "🔊 소리 켜짐";
+    });
+
+    drawTimer(0);
+</script>
+</body>
+</html>

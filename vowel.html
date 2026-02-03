@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 좌석 배치도</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --input-bg: #1e293b;
+            --accent: #f43f5e; /* 긴장감을 주는 레드/핑크 계열 */
+            --seat-color: #ffffff;
+            --primary: #38bdf8;
+        }
+
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: var(--bg-color);
+            color: white; display: flex; flex-direction: column; align-items: center; padding: 40px 20px;
+            overflow-x: hidden;
+        }
+
+        /* 메인 제목 */
+        h1 {
+            font-size: 3.5rem; font-weight: 900; color: var(--primary);
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            margin-bottom: 40px; letter-spacing: -1px;
+        }
+
+        /* 설정 영역 */
+        .controls {
+            background: var(--input-bg); padding: 30px 50px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex; gap: 30px; margin-bottom: 50px; align-items: flex-end;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
+        .input-group label { font-size: 0.9rem; color: #94a3b8; font-weight: 600; }
+        
+        input { 
+            padding: 12px; border: 2px solid #334155; border-radius: 10px; width: 80px; 
+            background: #0f172a; color: var(--primary);
+            font-size: 1.3rem; font-weight: bold; text-align: center; outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+
+        button {
+            padding: 15px 30px; background: var(--accent); color: white;
+            border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 800;
+            transition: 0.3s; box-shadow: 0 5px 15px rgba(244, 63, 94, 0.4);
+        }
+        button:hover { transform: translateY(-3px) scale(1.05); filter: brightness(1.2); }
+
+        /* 교실 레이아웃 */
+        .classroom { width: 100%; max-width: 1100px; display: flex; flex-direction: column; align-items: center; }
+
+        .blackboard {
+            width: 50%; background: #334155; color: #94a3b8; text-align: center;
+            padding: 10px; border-radius: 0 0 20px 20px; font-weight: bold; margin-bottom: 60px;
+            border: 2px solid #475569; border-top: none;
+        }
+
+        /* 좌석 그리드 (2명씩 짝지어 배치) */
+        .seat-grid {
+            display: grid; 
+            column-gap: 15px; /* 짝꿍 사이 간격 */
+            row-gap: 25px;    /* 앞뒤 간격 */
+            justify-content: center;
+        }
+
+        /* 복도(여백) 설정: 2번째 칸마다 넓은 여백 추가 */
+        .seat-grid > div:nth-child(2n) {
+            margin-right: 50px; /* 세로 복도 */
+        }
+        .seat-grid > div:nth-child(2n):last-child { margin-right: 0; }
+
+        .seat {
+            width: 100px; height: 110px; background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1); border-radius: 15px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .seat.revealed {
+            background: white; border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+
+        .seat .label { font-size: 0.7rem; color: #64748b; margin-bottom: 5px; }
+        
+        /* 숫자 롤링 애니메이션용 */
+        .number { 
+            font-size: 2.2rem; font-weight: 900; color: #1e293b; 
+            transition: 0.3s;
+        }
+
+        /* 두구두구 긴장감 효과 */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-1px, -2px) rotate(-1deg); }
+            40% { transform: translate(-3px, 0px) rotate(1deg); }
+            60% { transform: translate(3px, 2px) rotate(0deg); }
+            80% { transform: translate(1px, -1px) rotate(1deg); }
+            100% { transform: translate(-1px, 2px) rotate(-1deg); }
+        }
+
+        .shaking { animation: shake 0.1s infinite; }
+    </style>
+</head>
+<body>
+
+    <h1>✨ 랜덤 좌석 배치도</h1>
+
+    <div class="controls">
+        <div class="input-group">
+            <label>총 인원수</label>
+            <input type="number" id="total" value="24">
+        </div>
+        <div class="input-group">
+            <label>가로 좌석 수 (짝수 추천)</label>
+            <input type="number" id="cols" value="6">
+        </div>
+        <button onclick="startShuffle()">배치 시작 (두구두구...) 🎲</button>
+    </div>
+
+    <div class="classroom">
+        <div class="blackboard">SCREEN / BLACKBOARD</div>
+        <div class="seat-grid" id="seatGrid"></div>
+    </div>
+
+    <script>
+        function startShuffle() {
+            const total = parseInt(document.getElementById('total').value);
+            const cols = parseInt(document.getElementById('cols').value);
+            const grid = document.getElementById('seatGrid');
+            
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+            // 1. 번호 생성 및 셔플
+            let nums = Array.from({length: total}, (_, i) => i + 1);
+            for (let i = nums.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [nums[i], nums[j]] = [nums[j], nums[i]];
+            }
+
+            // 2. 빈 좌석 먼저 생성
+            nums.forEach((num, index) => {
+                const seat = document.createElement('div');
+                seat.className = 'seat shaking'; // 처음엔 흔들림 효과
+                seat.innerHTML = `
+                    <span class="label">Seat ${index + 1}</span>
+                    <span class="number">?</span>
+                `;
+                grid.appendChild(seat);
+
+                // 3. 순차적으로 공개 (긴장감 조성)
+                setTimeout(() => {
+                    revealSeat(seat, num);
+                }, 1000 + (index * 150)); // 시작 대기 1초 후 하나씩 공개
+            });
+        }
+
+        function revealSeat(seatElement, finalNum) {
+            const numDisplay = seatElement.querySelector('.number');
+            let count = 0;
+            
+            // 숫자가 팽글팽글 도는 효과
+            const rolling = setInterval(() => {
+                numDisplay.innerText = Math.floor(Math.random() * 30) + 1;
+                count++;
+                
+                if (count > 10) {
+                    clearInterval(rolling);
+                    numDisplay.innerText = finalNum;
+                    seatElement.classList.remove('shaking');
+                    seatElement.classList.add('revealed');
+                    
+                    // 역동적인 커지는 효과
+                    seatElement.style.transform = 'scale(1.1)';
+                    setTimeout(() => seatElement.style.transform = 'scale(1)', 200);
+                }
+            }, 50);
+        }
+    </script>
+</body>
+</html>

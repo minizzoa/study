@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 뽑기</title>
+    <style>
+        :root {
+            --bg-dark: #0a0f14;
+            --neon-mint: #00ffcc; /* 형광 민트색 */
+            --mint-glow: rgba(0, 255, 204, 0.6);
+            --accent-gold: #f1c40f;
+        }
+
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: var(--bg-dark);
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; margin: 0; padding: 10px; color: white;
+            overflow: hidden;
+        }
+
+        h2 { 
+            margin: 10px 0; color: var(--neon-mint); 
+            text-shadow: 0 0 15px var(--mint-glow);
+            letter-spacing: 2px;
+        }
+
+        /* 상단 결과 리스트 */
+        .results-container {
+            height: 75px; width: 95%; max-width: 850px;
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+            padding: 5px; background: rgba(0,0,0,0.5); border-radius: 50px;
+            border: 2px solid var(--neon-mint); margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        .result-ball {
+            min-width: 52px; height: 52px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: 900; color: #000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .main-content {
+            display: flex; align-items: center; justify-content: center;
+            gap: 40px; width: 100%; max-width: 950px;
+        }
+
+        /* 머신 레이아웃 */
+        .lucky-machine { position: relative; display: flex; flex-direction: column; align-items: center; }
+
+        /* 유리 돔 */
+        .glass-dome {
+            width: 280px; height: 280px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), rgba(255,255,255,0.02));
+            border-radius: 50%; border: 3px solid rgba(255,255,255,0.3);
+            position: relative; overflow: hidden; z-index: 5; /* 공들보다 아래 */
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* [수정] 형광 민트 본체 */
+        .machine-body {
+            width: 260px; height: 160px;
+            background: linear-gradient(135deg, var(--neon-mint), #00cca3);
+            border-radius: 0 0 60px 60px; margin-top: -50px;
+            position: relative; z-index: 1;
+            border: 4px solid #00dfb2;
+            box-shadow: 0 0 30px var(--mint-glow), 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .exit-slot {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 100px; background: #121212;
+            border-radius: 50%; border: 4px solid #1a1a1a;
+            box-shadow: inset 0 5px 25px rgba(0,0,0,1);
+        }
+
+        /* [핵심 수정] 뽑힌 공 - 모든 요소보다 위에 배치 */
+        #activeBallSlot {
+            position: absolute; 
+            bottom: 50px; /* 배출구 위치 */
+            left: 50%; transform: translateX(-50%);
+            width: 110px; height: 110px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 3.5rem; font-weight: 900; color: #000;
+            opacity: 0; 
+            z-index: 999; /* 통 안의 공(z-index: 5~10)보다 압도적으로 높게 설정 */
+            filter: drop-shadow(0 0 30px rgba(255,255,255,0.8));
+            pointer-events: none;
+        }
+
+        #activeBallSlot.drop { 
+            opacity: 1; 
+            transform: translate(-50%, -160px) scale(1.2); /* 통 정중앙 앞으로 튀어나옴 */
+            transition: 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        .mixing-ball {
+            position: absolute; width: 36px; height: 36px; border-radius: 50%;
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.3);
+            z-index: 6; /* 유리돔(5)보다는 위, 뽑힌공(999)보다는 아래 */
+        }
+
+        .is-mixing .mixing-ball { 
+            animation: bounce-natural var(--dur) infinite alternate ease-in-out; 
+        }
+
+        @keyframes bounce-natural {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(var(--tx1), var(--ty1)) rotate(180deg); }
+            100% { transform: translate(var(--tx2), var(--ty2)) rotate(360deg); }
+        }
+
+        /* 사이드 설정창 */
+        .sidebar {
+            background: rgba(255,255,255,0.05); padding: 30px; border-radius: 30px;
+            width: 240px; display: flex; flex-direction: column; gap: 20px; align-items: center;
+            backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .setting-item { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .setting-item label { font-size: 0.9rem; color: #00ffcc; font-weight: bold; text-transform: uppercase; }
+        .setting-item input { 
+            padding: 12px; border-radius: 12px; border: none; background: #222; 
+            color: var(--neon-mint); font-size: 1.4rem; text-align: center; font-weight: 900;
+        }
+
+        #drawBtn {
+            width: 100%; padding: 18px; font-size: 1.6rem; font-weight: 900;
+            background: var(--neon-mint); color: #000; border: none; border-radius: 15px;
+            cursor: pointer; box-shadow: 0 0 20px var(--mint-glow); transition: 0.2s;
+        }
+        #drawBtn:hover { transform: scale(1.03); background: #55ffdd; }
+        #drawBtn:active { transform: scale(0.97); }
+        #drawBtn:disabled { background: #333; color: #666; box-shadow: none; cursor: not-allowed; }
+
+        #soundToggle { margin-top: 10px; font-size: 0.85rem; color: #555; cursor: pointer; }
+        #soundToggle:hover { color: var(--neon-mint); }
+
+        @keyframes popIn { 
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; } 
+            100% { transform: scale(1) rotate(0deg); opacity: 1; } 
+        }
+    </style>
+</head>
+<body>
+
+    <h2>⚡ 랜덤 뽑기 ⚡</h2>
+
+    <div class="results-container" id="results"></div>
+
+    <div class="main-content">
+        <div class="lucky-machine">
+            <div class="glass-dome" id="dome">
+                <div id="ballPit"></div>
+            </div>
+            <div class="machine-body">
+                <div class="exit-slot"></div>
+            </div>
+            <div id="activeBallSlot">?</div>
+        </div>
+
+        <div class="sidebar">
+            <div class="setting-item">
+                <label>뽑을 개수</label>
+                <input type="number" id="ballCount" value="6" min="1" max="20">
+            </div>
+            <div class="setting-item">
+                <label>숫자 범위</label>
+                <input type="number" id="maxRange" value="45" min="1">
+            </div>
+            <button id="drawBtn">시 작</button>
+            <div id="soundToggle">🔊 사운드 ON</div>
+        </div>
+    </div>
+
+    <script>
+        const drawBtn = document.getElementById('drawBtn');
+        const soundToggle = document.getElementById('soundToggle');
+        const resultsContainer = document.getElementById('results');
+        const activeBallSlot = document.getElementById('activeBallSlot');
+        const dome = document.getElementById('dome');
+        const ballPit = document.getElementById('ballPit');
+
+        const ballColors = ['#FF006E', '#8338EC', '#00F5D4', '#FFBE0B', '#FB5607', '#3A86FF', '#FF00CC', '#00FF00'];
+        let audioCtx = null;
+        let isMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(freq, dur) {
+            if (!audioCtx || isMuted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
+
+        function initBalls() {
+            ballPit.innerHTML = '';
+            for(let i=0; i<35; i++) {
+                const b = document.createElement('div');
+                b.className = 'mixing-ball';
+                b.style.backgroundColor = ballColors[i % ballColors.length];
+                b.style.left = Math.random() * 220 + 'px';
+                b.style.top = Math.random() * 220 + 'px';
+                b.style.setProperty('--dur', (0.2 + Math.random() * 0.4) + 's');
+                b.style.setProperty('--tx1', (Math.random() * 160 - 80) + 'px');
+                b.style.setProperty('--ty1', (Math.random() * 160 - 80) + 'px');
+                b.style.setProperty('--tx2', (Math.random() * 160 - 80) + 'px');
+                b.style.setProperty('--ty2', (Math.random() * 160 - 80) + 'px');
+                ballPit.appendChild(b);
+            }
+        }
+
+        async function startDrawing() {
+            const count = parseInt(document.getElementById('ballCount').value);
+            const max = parseInt(document.getElementById('maxRange').value);
+            
+            drawBtn.disabled = true;
+            resultsContainer.innerHTML = '';
+            dome.classList.add('is-mixing');
+            
+            let picked = [];
+
+            for (let i = 0; i < count; i++) {
+                playSound(150, 0.1);
+                await new Promise(r => setTimeout(r, 700));
+
+                let num;
+                do { num = Math.floor(Math.random() * max) + 1; } while (picked.includes(num));
+                picked.push(num);
+
+                const ballColor = ballColors[Math.floor(Math.random() * ballColors.length)];
+                const ballGrad = `radial-gradient(circle at 30% 30%, #fff 0%, ${ballColor} 100%)`;
+                
+                activeBallSlot.style.background = ballGrad;
+                activeBallSlot.innerText = num;
+                activeBallSlot.classList.add('drop');
+                playSound(600, 0.3);
+                
+                await new Promise(r => setTimeout(r, 1100)); // 뽑힌 공 감상 시간
+
+                const resBall = document.createElement('div');
+                resBall.className = 'result-ball';
+                resBall.style.background = ballGrad;
+                resBall.innerText = num;
+                resultsContainer.appendChild(resBall);
+
+                activeBallSlot.classList.remove('drop');
+                await new Promise(r => setTimeout(r, 400));
+            }
+
+            dome.classList.remove('is-mixing');
+            drawBtn.disabled = false;
+        }
+
+        drawBtn.addEventListener('click', () => {
+            initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            startDrawing();
+        });
+
+        soundToggle.addEventListener('click', () => {
+            isMuted = !isMuted;
+            soundToggle.innerText = isMuted ? "🔇 사운드 OFF" : "🔊 사운드 ON";
+        });
+
+        initBalls();
+    </script>
+</body>
+</html>

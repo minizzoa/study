@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Lunch Machine - Mobile Ready</title>
+    <style>
+        :root {
+            --neon-orange: #ff9f43;
+            --neon-mint: #2effc3;
+            --dark-bg: #0a0a0a;
+            --card-bg: #1a1a1a;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h2 { 
+            color: var(--neon-orange); 
+            text-shadow: 0 0 10px var(--neon-orange); 
+            margin-bottom: 20px;
+            font-size: 1.5rem; /* 모바일 대응 크기 */
+        }
+
+        /* 결과 디스플레이 영역 */
+        .slot-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%; /* 전체 너비 사용 */
+            max-width: 500px;
+            margin-bottom: 30px;
+        }
+
+        #slot-display {
+            width: 100%; /* 부모 너비에 맞춤 */
+            height: 140px;
+            background: #111; 
+            border: 4px solid var(--neon-orange); 
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; /* 글자 크기 최적화 */
+            font-weight: 900; color: white;
+            box-shadow: 0 0 30px rgba(255, 159, 67, 0.2);
+            position: relative; overflow: hidden;
+            box-sizing: border-box;
+            text-align: center;
+            padding: 10px;
+        }
+
+        /* 메인 실행 버튼 */
+        .btn-spin {
+            width: 100%;
+            padding: 18px;
+            border-radius: 15px;
+            border: none;
+            background: var(--neon-orange);
+            color: black;
+            font-size: 1.3rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(255, 159, 67, 0.4);
+        }
+        .btn-spin:active { transform: scale(0.95); }
+
+        /* 입력 및 설정 영역 */
+        .controls {
+            background: var(--card-bg); 
+            padding: 15px; 
+            border-radius: 15px;
+            border: 1px solid #333; 
+            display: flex; 
+            flex-wrap: wrap; /* 좁으면 아래로 흐르게 */
+            gap: 8px; 
+            margin-bottom: 25px;
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+            justify-content: center;
+        }
+
+        input {
+            background: #2a2a2a; border: 1px solid #444; color: white;
+            padding: 12px; border-radius: 8px; outline: none; 
+            flex: 1; /* 가용 공간 모두 차지 */
+            min-width: 150px; /* 최소 너비 확보 */
+            font-size: 1rem;
+        }
+
+        button.sub-btn {
+            padding: 12px 15px; border-radius: 8px; border: none;
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-add { background: var(--neon-mint); color: black; }
+        .btn-save { background: #576574; color: white; }
+
+        /* 메뉴 창고 */
+        #menu-storage {
+            display: flex; flex-wrap: wrap; gap: 6px; 
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255,255,255,0.03); padding: 12px; 
+            border-radius: 12px;
+            border: 1px dashed #444;
+            box-sizing: border-box;
+        }
+
+        .menu-item {
+            background: #222; padding: 6px 12px; border-radius: 20px;
+            display: flex; align-items: center; gap: 6px; border: 1px solid #333;
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        .del-btn { color: #ff4757; cursor: pointer; font-size: 1.1rem; font-weight: bold; }
+
+        .winner {
+            color: var(--neon-mint) !important;
+            text-shadow: 0 0 20px var(--neon-mint);
+            transform: scale(1.1);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🍱 LUNCH SLOT</h2>
+
+    <div class="slot-container">
+        <div id="slot-display">READY?</div>
+        <button class="btn-spin" onclick="spinSlot()">오늘 뭐 먹지?</button>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="menu-input" placeholder="메뉴 추가..." onkeypress="if(event.keyCode==13) addMenu()">
+        <button class="sub-btn btn-add" onclick="addMenu()">추가</button>
+        <button class="sub-btn btn-save" onclick="saveMenus()">저장</button>
+    </div>
+
+    <div id="menu-storage">로드 중...</div>
+
+<script>
+    let menus = JSON.parse(localStorage.getItem('lunch-menus')) || 
+                ["김치찌개", "제육볶음", "돈까스", "초밥", "쌀국수", "햄버거", "스파게티", "모밀", "닭갈비", "라면", "떡볶이", "해장국", "감자탕", "오징어볶음", "쭈꾸미","막국수","보쌈","족발","치킨","김치볶음밥","낙지볶음","된장찌개","삼겹살","김치찜","등갈비","월남쌈","회","회덮밥","생선구이","불고기","냉면","칼국수","만두","피자","김밥","닭강정","마라탕","수제비","짜장면","곱창","삼계탕","찜닭","순대국밥","샐러드","설렁탕","카레","육개장","우동","양꼬치"];
+    
+    let isSpinning = false;
+    let audioCtx = null;
+    const display = document.getElementById('slot-display');
+    const storage = document.getElementById('menu-storage');
+
+    renderMenus();
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    function addMenu() {
+        const input = document.getElementById('menu-input');
+        if (input.value.trim()) {
+            menus.push(input.value.trim());
+            input.value = "";
+            renderMenus();
+        }
+    }
+
+    function saveMenus() {
+        localStorage.setItem('lunch-menus', JSON.stringify(menus));
+        alert("✅ 저장되었습니다!");
+    }
+
+    function renderMenus() {
+        if (menus.length === 0) {
+            storage.innerText = "비어있음";
+            return;
+        }
+        storage.innerHTML = menus.map((m, i) => `
+            <div class="menu-item">
+                <span>${m}</span>
+                <span class="del-btn" onclick="deleteMenu(${i})">&times;</span>
+            </div>
+        `).join('');
+    }
+
+    function deleteMenu(index) {
+        menus.splice(index, 1);
+        renderMenus();
+    }
+
+    function playSound(freq, duration) {
+        if (!audioCtx || audioCtx.state === 'suspended') return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    async function spinSlot() {
+        if (isSpinning || menus.length === 0) return;
+        initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        isSpinning = true;
+        display.classList.remove('winner');
+
+        let speed = 50; 
+        let rotations = 0;
+        let maxRotations = 25; 
+
+        const run = () => {
+            const randomMenu = menus[Math.floor(Math.random() * menus.length)];
+            display.innerText = randomMenu;
+            playSound(300 + (rotations * 15), 0.1);
+            
+            rotations++;
+
+            if (rotations < maxRotations) {
+                if (rotations > 15) speed += 60; 
+                setTimeout(run, speed);
+            } else {
+                display.classList.add('winner');
+                playSound(880, 0.4);
+                isSpinning = false;
+            }
+        };
+        run();
+    }
+</script>
+
+</body>
+</html>
