@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Number Picker - Control Edition</title>
+    <title>Neon Number Picker - Universal Edition</title>
     <style>
         :root {
             --neon-mint: #2effc3;
@@ -15,7 +15,7 @@
         }
 
         body {
-            font-family: 'Pretendard', sans-serif;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
             background-color: var(--dark-bg);
             color: white;
             display: flex;
@@ -23,38 +23,46 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 15px; /* 모바일 여백 */
+            box-sizing: border-box;
         }
 
         .container {
             background-color: var(--card-bg);
-            padding: 40px 30px;
+            padding: 40px 25px;
             border-radius: 24px;
             border: 1px solid #333;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             width: 100%;
-            max-width: 450px;
+            max-width: 420px; /* PC에서의 최대 폭 */
             text-align: center;
             position: relative;
+            animation: fadeIn 0.8s ease-out;
         }
 
-        /* 소리 온오프 스위치 스타일 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 소리 스위치 */
         .sound-control {
             position: absolute;
-            top: 20px;
-            right: 25px;
+            top: 15px;
+            right: 20px;
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: var(--text-gray);
             cursor: pointer;
+            z-index: 10;
         }
 
         .sound-control input { display: none; }
         .slider {
-            width: 34px;
-            height: 18px;
+            width: 32px;
+            height: 16px;
             background-color: #333;
             border-radius: 20px;
             position: relative;
@@ -64,9 +72,9 @@
         .slider:before {
             content: "";
             position: absolute;
-            width: 12px;
-            height: 12px;
-            left: 3px;
+            width: 10px;
+            height: 10px;
+            left: 2px;
             bottom: 2px;
             background-color: white;
             border-radius: 50%;
@@ -82,11 +90,13 @@
         }
 
         h1 {
-            margin-top: 10px;
+            margin-top: 15px;
+            margin-bottom: 30px;
             color: var(--neon-mint);
-            font-size: 2rem;
+            font-size: clamp(1.5rem, 8vw, 2.2rem); /* 가변 폰트 */
             text-shadow: var(--neon-glow);
             letter-spacing: -1px;
+            font-weight: 800;
         }
 
         .input-group {
@@ -94,71 +104,96 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            margin-bottom: 35px;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            color: var(--text-gray);
         }
 
         input[type="number"] {
-            width: 110px;
-            padding: 12px;
+            width: 90px;
+            padding: 10px;
             background-color: #0d0d0d;
             border: 1px solid #444;
             border-radius: 12px;
-            color: white;
+            color: var(--neon-mint);
             font-size: 1.8rem;
             font-weight: 800;
             text-align: center;
             outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="number"]:focus {
+            border-color: var(--neon-mint);
         }
 
         .buttons {
             display: flex;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         button {
             flex: 1;
             padding: 16px;
             border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
+            border-radius: 14px;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
         }
 
         #drawBtn {
             background-color: var(--neon-mint);
             color: #000;
             box-shadow: var(--neon-glow);
+            flex: 2; /* 시작 버튼을 더 크게 */
         }
 
         #drawBtn:hover:not(:disabled) {
-            filter: brightness(1.1);
             transform: translateY(-2px);
             box-shadow: var(--neon-glow-strong);
         }
 
-        #resetBtn { background-color: #222; color: #888; }
+        #drawBtn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        #resetBtn { background-color: #252525; color: #777; }
+        #resetBtn:hover { color: #aaa; background-color: #333; }
 
         #resultArea {
             display: none;
-            margin-top: 30px;
-            padding: 40px 20px;
+            margin-top: 25px;
+            padding: 30px 15px;
             border-radius: 20px;
-            background: linear-gradient(145deg, #1a1a1a, #111);
-            border: 1px solid var(--neon-mint);
+            background: linear-gradient(145deg, #1d1d1d, #111);
+            border: 1px solid rgba(46, 255, 195, 0.3);
             box-shadow: var(--neon-glow);
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
         }
 
-        #resultArea.show { display: block; }
-        #winnerContent { font-size: 5rem; font-weight: 900; }
+        #resultArea.show { display: block; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        #winnerContent { 
+            font-size: clamp(3.5rem, 15vw, 5.5rem); /* 모바일에서도 안 깨지게 */
+            font-weight: 900; 
+            line-height: 1;
+            margin: 10px 0;
+            color: white;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
 
         @keyframes popIn {
-            0% { opacity: 0; transform: translateY(20px) scale(0.8); }
+            0% { opacity: 0; transform: translateY(15px) scale(0.95); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
+
+        /* 크롬 숫자기 화살표 제거 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body>
@@ -171,18 +206,21 @@
     </label>
 
     <h1>NEON PICKER</h1>
+    
     <div class="input-group">
-        <label>TOTAL : </label>
-        <input type="number" id="totalCount" value="30" min="2">
-        <span>명</span>
+        <span style="font-weight: 500;">TOTAL</span>
+        <input type="number" id="totalCount" value="30" min="2" inputmode="numeric">
+        <span style="font-weight: 500;">명</span>
     </div>
+
     <div class="buttons">
-        <button id="drawBtn">시작</button>
-        <button id="resetBtn">초기화</button>
+        <button id="drawBtn">추첨 시작</button>
+        <button id="resetBtn">리셋</button>
     </div>
+
     <div id="resultArea">
-        <div id="resultLabel" style="color:var(--neon-mint); letter-spacing:1px; margin-bottom:10px; font-weight: bold;">당첨번호는?</div>
-        <div id="winnerContent"></div>
+        <div id="resultLabel" style="color:var(--neon-mint); font-size: 0.9rem; letter-spacing:1.5px; margin-bottom:10px; font-weight: 600; text-transform: uppercase;">Ready...</div>
+        <div id="winnerContent">0</div>
     </div>
 </div>
 
@@ -190,10 +228,8 @@
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const soundToggle = document.getElementById('soundToggle');
 
-    function playSound(freq, type, duration, volume = 0.1) {
-        // 소리 체크박스가 해제되어 있으면 소리 내지 않음
+    function playSound(freq, type, duration, volume = 0.08) {
         if (!soundToggle.checked) return;
-
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
@@ -207,6 +243,7 @@
     }
 
     const drawBtn = document.getElementById('drawBtn');
+    const resetBtn = document.getElementById('resetBtn');
     const resultArea = document.getElementById('resultArea');
     const winnerContent = document.getElementById('winnerContent');
     const resultLabel = document.getElementById('resultLabel');
@@ -215,49 +252,60 @@
     drawBtn.addEventListener('click', function() {
         if (isAnimating) return;
         const count = parseInt(document.getElementById('totalCount').value);
-        if (isNaN(count) || count < 2) return alert("2명 이상 입력하세요.");
+        if (isNaN(count) || count < 2) {
+            alert("2명 이상의 숫자를 입력해주세요.");
+            return;
+        }
 
         if (audioCtx.state === 'suspended') audioCtx.resume();
         
         isAnimating = true;
         drawBtn.disabled = true;
-        drawBtn.innerText = "추첨 중...";
-        resultLabel.innerText = "두구두구두구..."; // 추첨 중 메시지
+        drawBtn.innerText = "...";
+        resultLabel.innerText = "SHUFFLING...";
         resultArea.classList.add('show');
 
         let counter = 0;
-        const shuffleCount = 35;
+        const shuffleCount = 40; // 조금 더 길게 변경
         
         const shuffleInterval = setInterval(() => {
             const randomNum = Math.floor(Math.random() * count) + 1;
             winnerContent.innerText = randomNum;
             
-            playSound(300 + (counter * 15), 'sine', 0.1);
+            // 점점 빨라지거나 고조되는 사운드
+            playSound(250 + (counter * 12), 'sine', 0.08);
             
             counter++;
             if (counter >= shuffleCount) {
                 clearInterval(shuffleInterval);
                 const finalWinner = Math.floor(Math.random() * count) + 1;
                 
-                resultLabel.innerText = "당첨번호는?"; // 최종 메시지
-                winnerContent.innerText = finalWinner + "번";
+                resultLabel.innerText = "WINNER IS";
+                winnerContent.innerText = finalWinner;
+                winnerContent.style.color = "var(--neon-mint)";
+                winnerContent.style.textShadow = "var(--neon-glow)";
                 
-                // 극적인 당첨 소리
-                playSound(523.25, 'square', 0.6, 0.15); // C5
-                playSound(659.25, 'square', 0.6, 0.1);  // E5
-                playSound(783.99, 'square', 0.6, 0.1);  // G5
+                // 축하 사운드
+                setTimeout(() => {
+                    playSound(523.25, 'triangle', 0.4, 0.1); // C5
+                    playSound(659.25, 'triangle', 0.4, 0.1); // E5
+                    playSound(783.99, 'triangle', 0.6, 0.1); // G5
+                }, 50);
                 
                 drawBtn.disabled = false;
-                drawBtn.innerText = "시작";
+                drawBtn.innerText = "다시 추첨";
                 isAnimating = false;
             }
-        }, 70);
+        }, 60);
     });
 
-    document.getElementById('resetBtn').addEventListener('click', () => {
+    resetBtn.addEventListener('click', () => {
         if (isAnimating) return;
         resultArea.classList.remove('show');
-        drawBtn.innerText = "시작";
+        winnerContent.style.color = "white";
+        winnerContent.style.textShadow = "none";
+        drawBtn.innerText = "추첨 시작";
+        document.getElementById('totalCount').value = 30;
     });
 </script>
 </body>
