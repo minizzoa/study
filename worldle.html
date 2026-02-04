@@ -21,46 +21,63 @@
             display: flex; flex-direction: column; align-items: center; 
             margin: 0; padding: 10px; font-family: 'Jua', sans-serif;
             color: var(--text-color);
+            min-height: 100vh;
         }
 
-        /* 제목 이모지 변경 */
-        h1 { margin: 10px 0; font-size: 2.5rem; text-shadow: 1px 1px #eee; }
+        h1 { margin: 10px 0; font-size: 2.2rem; }
 
-        .top-bar { width: 100%; max-width: 350px; display: flex; justify-content: flex-end; margin-bottom: 10px; }
+        .top-bar { width: 95%; max-width: 380px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 
         #restart-btn {
-            background: #8f7a66; color: white; border: none; padding: 8px 15px;
+            background: #8f7a66; color: white; border: none; padding: 8px 18px;
             border-radius: 10px; cursor: pointer; font-family: 'Jua'; font-size: 1rem;
-            box-shadow: 0 3px #5d544b;
         }
 
-        #game-container {
-            display: grid; grid-template-rows: repeat(6, 1fr); gap: 8px;
-            margin-bottom: 20px;
+        #game-container { 
+            display: grid; grid-template-rows: repeat(6, 1fr); gap: 10px; 
+            margin-bottom: 20px; cursor: pointer; /* 클릭하면 키보드 활성화 알림 */
         }
-
-        .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 
         .tile {
-            width: 60px; height: 60px; border: 2px solid #d3d6da;
+            width: 60px; height: 60px; border: 2.5px solid #d3d6da;
             background: var(--tile-empty); display: flex; align-items: center;
             justify-content: center; font-size: 2rem; font-weight: bold;
-            text-transform: uppercase; border-radius: 10px; transition: 0.3s;
+            text-transform: uppercase; border-radius: 12px; transition: 0.3s;
         }
 
         .correct { background: var(--tile-correct); border-color: var(--tile-correct); color: white; }
         .present { background: var(--tile-present); border-color: var(--tile-present); color: white; }
         .absent { background: var(--tile-absent); border-color: var(--tile-absent); color: white; }
 
-        #message { 
-            height: 50px; margin-top: 10px; font-size: 2rem; 
-            font-weight: bold; color: #d35400; text-align: center;
+        #message { height: 50px; margin-top: 10px; font-size: 1.8rem; font-weight: bold; color: #d35400; text-align: center; }
+
+        /* 입력용 숨겨진 input - 화면 밖으로 보냄 */
+        #hidden-input {
+            position: absolute;
+            top: -100px;
+            left: -100px;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
         }
 
-        .tip-container {
-            width: 90vw; max-width: 350px; background: white; padding: 15px;
-            border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-size: 0.95rem;
-            margin-top: 20px;
+        .guide-container {
+            width: 90%; max-width: 380px; background: white; padding: 15px;
+            border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-top: auto; margin-bottom: 20px; font-size: 1rem;
+        }
+        .guide-title { color: #8f7a66; font-size: 1.2rem; margin-bottom: 10px; display: block; text-align: center; }
+        .kb-notice { 
+            display: block; text-align: center; background: #eee; 
+            padding: 10px; border-radius: 8px; color: #666; font-size: 0.9rem;
+            margin-bottom: 10px; animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -69,16 +86,26 @@
     <h1>🎈 단어 맞히기 ✨</h1>
 
     <div class="top-bar">
-        <button id="restart-btn" onclick="init()">다시 시작</button>
+        <div style="font-size: 1rem; color: #888;">기회는 6번!</div>
+        <button id="restart-btn" onclick="init()">새 게임</button>
     </div>
     
-    <div id="game-container"></div>
+    <input type="text" id="hidden-input" autocomplete="off" autofocus>
+
+    <div id="game-container" onclick="focusInput()">
+        </div>
+
     <div id="message"></div>
 
-    <div class="tip-container">
-        <b style="color: #8f7a66;">💡 게임 방법</b>
-        <p style="margin: 5px 0;">키보드로 5글자 영단어를 입력하고 <b>Enter</b>를 누르세요!</p>
-        <p style="font-size: 0.85rem; color: #888;">* 정답 사운드를 위해 게임 시작 후 키를 누르면 소리가 활성화됩니다.</p>
+    <div class="guide-container" onclick="focusInput()">
+        <span class="kb-notice">👇 화면을 터치하면 자판이 올라와요!</span>
+        <b class="guide-title">📖 게임 방법</b>
+        <p style="margin: 5px 0; text-align: center;">영단어를 입력하고 <b>[이동/확인]</b> 버튼을 누르세요.</p>
+        <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+            <span>🟢 정답</span>
+            <span>🟡 위치 다름</span>
+            <span>⚪ 없음</span>
+        </div>
     </div>
 
     <audio id="winSound" preload="auto">
@@ -86,14 +113,14 @@
     </audio>
 
     <script>
-        const wordList = ["APPLE", "BREAD", "CLOUD", "DREAM", "FRUIT", "GRAPE", "HOUSE", "LIGHT", "MUSIC", "SMILE", "WATER", "PIANO"];
+        const wordList = ["APPLE", "BREAD", "CLOUD", "DREAM", "FRUIT", "GRAPE", "HOUSE", "LIGHT", "MUSIC", "SMILE", "PIANO", "WATER"];
         let secretWord = "";
         let currentGuess = "";
         let attempts = 0;
         let gameOver = false;
-        let audioUnlocked = false;
 
         const container = document.getElementById('game-container');
+        const hiddenInput = document.getElementById('hidden-input');
         const winSound = document.getElementById('winSound');
 
         function init() {
@@ -103,6 +130,7 @@
             attempts = 0;
             gameOver = false;
             document.getElementById('message').innerText = "";
+            hiddenInput.value = "";
             
             for (let i = 0; i < 6; i++) {
                 const row = document.createElement('div');
@@ -114,38 +142,39 @@
                 }
                 container.appendChild(row);
             }
+            focusInput();
         }
 
-        // 사운드 잠금 해제 함수 (브라우저 정책 대응)
-        function unlockAudio() {
-            if (!audioUnlocked) {
-                winSound.play().then(() => {
-                    winSound.pause();
-                    winSound.currentTime = 0;
-                    audioUnlocked = true;
-                }).catch(e => console.log("사운드 준비 중..."));
-            }
+        // 입력창에 포커스를 주어 키보드를 띄움
+        function focusInput() {
+            if (!gameOver) hiddenInput.focus();
         }
 
-        window.onkeydown = (e) => {
-            unlockAudio(); // 아무 키나 누르면 오디오 재생 가능 상태로 변경
+        hiddenInput.addEventListener('input', (e) => {
             if (gameOver) return;
-            const key = e.key.toUpperCase();
+            
+            // 입력값을 대문자로 변경하고 영문만 허용
+            const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+            e.target.value = val;
 
-            if (key === 'ENTER') submitGuess();
-            else if (key === 'BACKSPACE') deleteLetter();
-            else if (currentGuess.length < 5 && /^[A-Z]$/.test(key)) addLetter(key);
-        };
+            if (val.length <= 5) {
+                currentGuess = val;
+                updateTiles();
+            } else {
+                e.target.value = val.slice(0, 5);
+                currentGuess = e.target.value;
+            }
+        });
 
-        function addLetter(letter) {
-            currentGuess += letter;
-            updateTiles();
-        }
-
-        function deleteLetter() {
-            currentGuess = currentGuess.slice(0, -1);
-            updateTiles();
-        }
+        // 엔터키(확인/이동) 감지
+        hiddenInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (currentGuess.length === 5) {
+                    submitGuess();
+                    hiddenInput.value = ""; // 입력값 초기화
+                }
+            }
+        });
 
         function updateTiles() {
             const rows = document.getElementsByClassName('row');
@@ -156,8 +185,6 @@
         }
 
         function submitGuess() {
-            if (currentGuess.length !== 5) return;
-            
             const rows = document.getElementsByClassName('row');
             const tiles = rows[attempts].getElementsByClassName('tile');
             const guessArr = currentGuess.split("");
@@ -174,14 +201,16 @@
             if (currentGuess === secretWord) {
                 setTimeout(() => {
                     document.getElementById('message').innerText = "🎈 정답입니다! ✨";
-                    confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
-                    winSound.play().catch(e => console.log("사운드 재생 오류:", e));
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    winSound.play();
                     gameOver = true;
+                    hiddenInput.blur(); // 키보드 내리기
                 }, 800);
             } else if (attempts === 5) {
                 setTimeout(() => {
-                    document.getElementById('message').innerText = `정답은: ${secretWord}`;
+                    document.getElementById('message').innerText = `정답: ${secretWord}`;
                     gameOver = true;
+                    hiddenInput.blur();
                 }, 800);
             } else {
                 attempts++;
@@ -189,6 +218,7 @@
             }
         }
 
+        // 페이지 로드 시 바로 시작
         init();
     </script>
 </body>
