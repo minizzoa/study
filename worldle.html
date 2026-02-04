@@ -25,9 +25,7 @@
         }
 
         h1 { margin: 10px 0; font-size: 2.2rem; }
-
         .top-bar { width: 95%; max-width: 380px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-
         #restart-btn {
             background: #8f7a66; color: white; border: none; padding: 8px 18px;
             border-radius: 10px; cursor: pointer; font-family: 'Jua'; font-size: 1rem;
@@ -35,7 +33,7 @@
 
         #game-container { 
             display: grid; grid-template-rows: repeat(6, 1fr); gap: 10px; 
-            margin-bottom: 20px; cursor: pointer; /* 클릭하면 키보드 활성화 알림 */
+            margin-bottom: 20px; cursor: pointer;
         }
         .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 
@@ -46,39 +44,30 @@
             text-transform: uppercase; border-radius: 12px; transition: 0.3s;
         }
 
-        .correct { background: var(--tile-correct); border-color: var(--tile-correct); color: white; }
-        .present { background: var(--tile-present); border-color: var(--tile-present); color: white; }
-        .absent { background: var(--tile-absent); border-color: var(--tile-absent); color: white; }
+        .correct { background: var(--tile-correct); border-color: var(--tile-correct); color: white; animation: flip 0.5s; }
+        .present { background: var(--tile-present); border-color: var(--tile-present); color: white; animation: flip 0.5s; }
+        .absent { background: var(--tile-absent); border-color: var(--tile-absent); color: white; animation: flip 0.5s; }
+
+        @keyframes flip {
+            0% { transform: rotateX(0); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0); }
+        }
 
         #message { height: 50px; margin-top: 10px; font-size: 1.8rem; font-weight: bold; color: #d35400; text-align: center; }
-
-        /* 입력용 숨겨진 input - 화면 밖으로 보냄 */
-        #hidden-input {
-            position: absolute;
-            top: -100px;
-            left: -100px;
-            opacity: 0;
-            width: 1px;
-            height: 1px;
-        }
+        #hidden-input { position: absolute; top: -100px; left: -100px; opacity: 0; width: 1px; height: 1px; }
 
         .guide-container {
             width: 90%; max-width: 380px; background: white; padding: 15px;
             border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             margin-top: auto; margin-bottom: 20px; font-size: 1rem;
         }
-        .guide-title { color: #8f7a66; font-size: 1.2rem; margin-bottom: 10px; display: block; text-align: center; }
         .kb-notice { 
             display: block; text-align: center; background: #eee; 
             padding: 10px; border-radius: 8px; color: #666; font-size: 0.9rem;
             margin-bottom: 10px; animation: pulse 2s infinite;
         }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -92,15 +81,12 @@
     
     <input type="text" id="hidden-input" autocomplete="off" autofocus>
 
-    <div id="game-container" onclick="focusInput()">
-        </div>
-
+    <div id="game-container" onclick="focusInput()"></div>
     <div id="message"></div>
 
     <div class="guide-container" onclick="focusInput()">
         <span class="kb-notice">👇 화면을 터치하면 자판이 올라와요!</span>
-        <b class="guide-title">📖 게임 방법</b>
-        <p style="margin: 5px 0; text-align: center;">영단어를 입력하고 <b>[이동/확인]</b> 버튼을 누르세요.</p>
+        <p style="margin: 5px 0; text-align: center;">영단어를 입력하고 <b>[확인/Enter]</b>을 누르세요.</p>
         <div style="display: flex; justify-content: space-around; margin-top: 10px;">
             <span>🟢 정답</span>
             <span>🟡 위치 다름</span>
@@ -112,8 +98,9 @@
         <source src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" type="audio/mpeg">
     </audio>
 
+    <script src="words.js"></script>
+
     <script>
-        const wordList = ["APPLE", "BREAD", "CLOUD", "DREAM", "FRUIT", "GRAPE", "HOUSE", "LIGHT", "MUSIC", "SMILE", "PIANO", "WATER"];
         let secretWord = "";
         let currentGuess = "";
         let attempts = 0;
@@ -125,6 +112,7 @@
 
         function init() {
             container.innerHTML = "";
+            // words.js에 정의된 wordList에서 랜덤 선택
             secretWord = wordList[Math.floor(Math.random() * wordList.length)];
             currentGuess = "";
             attempts = 0;
@@ -145,18 +133,14 @@
             focusInput();
         }
 
-        // 입력창에 포커스를 주어 키보드를 띄움
         function focusInput() {
             if (!gameOver) hiddenInput.focus();
         }
 
         hiddenInput.addEventListener('input', (e) => {
             if (gameOver) return;
-            
-            // 입력값을 대문자로 변경하고 영문만 허용
             const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
             e.target.value = val;
-
             if (val.length <= 5) {
                 currentGuess = val;
                 updateTiles();
@@ -166,12 +150,13 @@
             }
         });
 
-        // 엔터키(확인/이동) 감지
         hiddenInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 if (currentGuess.length === 5) {
                     submitGuess();
-                    hiddenInput.value = ""; // 입력값 초기화
+                    hiddenInput.value = ""; 
+                } else {
+                    alert("5글자를 입력해주세요!");
                 }
             }
         });
@@ -192,10 +177,14 @@
 
             guessArr.forEach((letter, i) => {
                 setTimeout(() => {
-                    if (letter === secretArr[i]) tiles[i].classList.add('correct');
-                    else if (secretArr.includes(letter)) tiles[i].classList.add('present');
-                    else tiles[i].classList.add('absent');
-                }, i * 150);
+                    if (letter === secretArr[i]) {
+                        tiles[i].classList.add('correct');
+                    } else if (secretWord.includes(letter)) {
+                        tiles[i].classList.add('present');
+                    } else {
+                        tiles[i].classList.add('absent');
+                    }
+                }, i * 200);
             });
 
             if (currentGuess === secretWord) {
@@ -204,21 +193,20 @@
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     winSound.play();
                     gameOver = true;
-                    hiddenInput.blur(); // 키보드 내리기
-                }, 800);
+                    hiddenInput.blur();
+                }, 1200);
             } else if (attempts === 5) {
                 setTimeout(() => {
-                    document.getElementById('message').innerText = `정답: ${secretWord}`;
+                    document.getElementById('message').innerText = `아쉬워요! 정답은 ${secretWord}`;
                     gameOver = true;
                     hiddenInput.blur();
-                }, 800);
+                }, 1200);
             } else {
                 attempts++;
                 currentGuess = "";
             }
         }
 
-        // 페이지 로드 시 바로 시작
         init();
     </script>
 </body>
