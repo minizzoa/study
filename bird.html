@@ -79,6 +79,8 @@
     
     <p class="guide-text">화면을 터치해서 삐약이를 높이 띄우세요!<br>(초반에는 기둥 사이가 아주 넓어요 😊)</p>
 
+    <img src="chick_flying.png" id="birdImage" style="display:none;">
+
     <audio id="jumpSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
     <audio id="scoreSound" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
     <audio id="hitSound" src="https://assets.mixkit.co/active_storage/sfx/2533/2533-preview.mp3" preload="auto"></audio>
@@ -90,14 +92,24 @@
         const muteBtn = document.getElementById("muteBtn");
         const overlay = document.getElementById("overlay");
         const levelTag = document.getElementById("level-tag");
+        const birdImage = document.getElementById("birdImage"); // 이미지 요소 가져오기
         
         const CW = 360, CH = 500;
         canvas.width = CW; canvas.height = CH;
 
         let bird, pipes, score, frames, gameActive, isPaused, isMuted = false;
         
-        // 난이도 변수 (초반에 매우 쉽게 설정)
         let pipeSpeed, pipeGap, spawnInterval;
+
+        // 이미지가 로드될 때까지 기다림
+        birdImage.onload = () => {
+            resetGame();
+        };
+        // 만약 이미지가 바로 로드되지 않는다면 (캐시 등으로) 강제 호출
+        if (birdImage.complete) {
+            resetGame();
+        }
+
 
         function playSfx(id) {
             if (isMuted) return;
@@ -116,25 +128,32 @@
         class Bird {
             constructor() {
                 this.x = 60; this.y = CH / 2; this.v = 0;
-                this.gravity = 0.22; this.jumpPower = -4.8; this.radius = 16;
+                this.gravity = 0.22; this.jumpPower = -4.8; 
+                this.width = 40; // 이미지 크기에 맞춰 조절
+                this.height = 40; // 이미지 크기에 맞춰 조절
             }
             draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.v * 0.1)));
-                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = "#FFEB3B"; ctx.fill();
-                ctx.strokeStyle = "#FBC02D"; ctx.lineWidth = 3; ctx.stroke();
-                ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = "#FF9800"; ctx.beginPath(); ctx.moveTo(14, -2); ctx.lineTo(24, 3); ctx.lineTo(14, 8); ctx.fill();
-                ctx.restore();
+                // 이미지가 로드되었을 때만 그리기
+                if (birdImage.complete && birdImage.naturalWidth !== 0) {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.v * 0.1)));
+                    // 이미지 중심을 기준으로 그리기 위해 위치 조정
+                    ctx.drawImage(birdImage, -this.width / 2, -this.height / 2, this.width, this.height);
+                    ctx.restore();
+                } else {
+                    // 이미지가 로드되지 않았다면 기존처럼 원으로 그림 (임시)
+                    ctx.beginPath(); ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
+                    ctx.fillStyle = "#FFEB3B"; ctx.fill();
+                    ctx.strokeStyle = "#FBC02D"; ctx.lineWidth = 3; ctx.stroke();
+                }
             }
             update() {
                 if (isPaused) return;
                 this.v += this.gravity;
                 this.y += this.v;
-                if (this.y + this.radius > CH) endGame();
-                if (this.y - this.radius < 0) { this.y = this.radius; this.v = 0; }
+                // 바닥 또는 천장 충돌 시 게임 오버
+                if (this.y + this.height / 2 > CH || this.y - this.height / 2 < 0) endGame();
             }
             jump() {
                 if (isPaused || !gameActive) return;
@@ -144,21 +163,20 @@
         }
 
         function updateDifficulty() {
-            // [난이도 로직 수정] 
-            // 0~5점까지는 '매우 쉬움' (속도 느림, 간격 매우 넓음)
-            // 이후 점수가 오를수록 점진적으로 강화
             if (score < 5) {
                 pipeSpeed = 1.8; 
-                pipeGap = 180; // 아주 넓은 통로
-                spawnInterval = 120; // 기둥이 천천히 나타남
+                pipeGap = 180; 
+                spawnInterval = 120;
                 levelTag.innerText = "초보 삐약이";
                 levelTag.style.background = "#fff";
+                levelTag.style.color = "#5d544b";
             } else if (score < 15) {
                 pipeSpeed = 2.2 + (score - 5) * 0.1;
                 pipeGap = 180 - (score - 5) * 3;
                 spawnInterval = 110 - (score - 5) * 2;
                 levelTag.innerText = "중수 삐약이";
                 levelTag.style.background = "#ffeb3b";
+                levelTag.style.color = "#5d544b";
             } else {
                 pipeSpeed = Math.min(3.2 + (score - 15) * 0.05, 5.0);
                 pipeGap = Math.max(150 - (score - 15) * 2, 110);
@@ -167,11 +185,12 @@
                 levelTag.style.background = "#ff8b94";
                 levelTag.style.color = "white";
             }
-
-            // 레벨에 따른 배경색 변화
+            
             if (score >= 5) {
                 const hue = Math.max(200 - score * 2, 150);
                 canvas.style.background = `hsl(${hue}, 70%, 75%)`;
+            } else {
+                 canvas.style.background = "var(--sky)"; // 초기 배경색 유지
             }
         }
 
@@ -197,7 +216,7 @@
             gameActive = true; isPaused = false;
             canvas.style.background = "var(--sky)";
             overlay.style.display = "none";
-            updateDifficulty();
+            updateDifficulty(); // 난이도 초기화
             document.getElementById("score").innerText = "0";
             requestAnimationFrame(loop);
         }
@@ -220,19 +239,19 @@
             pipes.forEach((p, i) => {
                 p.x -= pipeSpeed;
                 ctx.fillStyle = "#8BC34A";
-                // 기둥 그리기
                 ctx.fillRect(p.x, 0, 50, p.top);
                 ctx.fillRect(p.x, p.top + p.gap, 50, CH);
-                // 기둥 테두리
+                
                 ctx.strokeStyle = "#558B2F"; ctx.lineWidth = 2;
                 ctx.strokeRect(p.x, 0, 50, p.top);
                 ctx.strokeRect(p.x, p.top + p.gap, 50, CH);
                 
-                if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + 50) {
-                    if (bird.y - bird.radius < p.top || bird.y + bird.radius > p.top + p.gap) endGame();
+                // [충돌 감지 로직 수정]: 이미지 크기 반영
+                if (bird.x + bird.width / 2 > p.x && bird.x - bird.width / 2 < p.x + 50) {
+                    if (bird.y - bird.height / 2 < p.top || bird.y + bird.height / 2 > p.top + p.gap) endGame();
                 }
 
-                if (p.x + 50 < bird.x && !p.passed) {
+                if (p.x + 50 < bird.x - bird.width/2 && !p.passed) { // 점수 획득 조건도 이미지 기준
                     score++;
                     p.passed = true;
                     document.getElementById("score").innerText = score;
@@ -247,7 +266,6 @@
             requestAnimationFrame(loop);
         }
 
-        // 입력 제어 (모바일/PC 공용)
         window.addEventListener("touchstart", (e) => {
             if(e.target.tagName === 'BUTTON') return;
             e.preventDefault(); bird.jump();
@@ -257,8 +275,6 @@
             bird.jump();
         });
         window.addEventListener("keydown", (e) => { if (e.code === "Space") bird.jump(); });
-
-        resetGame();
     </script>
 </body>
 </html>
