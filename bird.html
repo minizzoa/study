@@ -13,7 +13,6 @@
         body { 
             margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; 
             background: #fdf6e3; font-family: 'Jua', sans-serif; overflow: hidden;
-            /* 모바일 드래그 및 롱터치 방지 */
             touch-action: none; -webkit-user-select: none; user-select: none;
         }
 
@@ -25,6 +24,7 @@
             padding: 8px 15px; border-radius: 12px; box-sizing: border-box;
         }
         .score-info { font-size: 1rem; color: #5d544b; }
+        #level-tag { font-size: 0.8rem; background: #ffeb3b; padding: 2px 8px; border-radius: 10px; margin-left: 5px; }
 
         .controls { display: flex; gap: 5px; }
         button {
@@ -37,7 +37,7 @@
         #game-container { position: relative; width: 90vw; height: 70vh; max-width: 360px; max-height: 500px; }
         canvas { 
             background: var(--sky); border-radius: 15px; width: 100%; height: 100%;
-            display: block; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: block; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: background 1s;
         }
 
         #overlay {
@@ -46,16 +46,17 @@
             flex-direction: column; align-items: center; justify-content: center;
             border-radius: 15px; z-index: 10;
         }
-        
-        .guide { margin-top: 10px; color: #888; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <h1>🐤 날아라 삐약이! 🚀</h1>
+    <h1>🚀 날아라 삐약이! ✨</h1>
 
     <div class="status-bar">
-        <div class="score-info">점수: <span id="score">0</span> | 최고: <span id="best">0</span></div>
+        <div class="score-info">
+            점수: <span id="score">0</span>
+            <span id="level-tag">LEVEL 1</span>
+        </div>
         <div class="controls">
             <button class="btn-pause" onclick="togglePause(event)" id="pauseBtn">중지</button>
             <button class="btn-restart" onclick="resetGame(event)">다시 시작</button>
@@ -65,13 +66,11 @@
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="overlay">
-            <h2 style="font-size: 2rem; color: #ff8b94; margin: 0;">삐약... 털썩!</h2>
+            <h2 id="end-title" style="font-size: 2rem; color: #ff8b94; margin: 0;">삐약... 털썩!</h2>
             <p id="finalScore" style="font-size: 1.2rem; margin: 10px 0;"></p>
             <button class="btn-restart" onclick="resetGame(event)" style="padding: 12px 25px; font-size: 1.2rem; background: var(--btn-main);">다시 도전!</button>
         </div>
     </div>
-    
-    <p class="guide">화면 어디든 터치하면 삐약이가 날아올라요!</p>
 
     <audio id="jumpSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
     <audio id="scoreSound" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
@@ -82,14 +81,15 @@
         const ctx = canvas.getContext("2d");
         const pauseBtn = document.getElementById("pauseBtn");
         const overlay = document.getElementById("overlay");
+        const levelTag = document.getElementById("level-tag");
         
-        // 캔버스 크기 고정 (좌표 계산용)
-        const CW = 360;
-        const CH = 500;
-        canvas.width = CW;
-        canvas.height = CH;
+        const CW = 360, CH = 500;
+        canvas.width = CW; canvas.height = CH;
 
-        let bird, pipes, score, bestScore = 0, frames, gameActive, isPaused;
+        let bird, pipes, score, frames, gameActive, isPaused;
+        
+        // 난이도 조절 변수들
+        let pipeSpeed, pipeGap, spawnInterval;
 
         function playSfx(id) {
             const sound = document.getElementById(id);
@@ -99,24 +99,16 @@
 
         class Bird {
             constructor() {
-                this.x = 60;
-                this.y = CH / 2;
-                this.v = 0;
-                this.gravity = 0.22;
-                this.jumpPower = -4.8;
-                this.radius = 16;
+                this.x = 60; this.y = CH / 2; this.v = 0;
+                this.gravity = 0.22; this.jumpPower = -4.8; this.radius = 16;
             }
             draw() {
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                // 속도에 따라 몸을 살짝 기울임
                 ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.v * 0.1)));
-                
-                // 몸통
                 ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = "#FFEB3B"; ctx.fill();
                 ctx.strokeStyle = "#FBC02D"; ctx.lineWidth = 3; ctx.stroke();
-                // 눈/부리
                 ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = "#FF9800"; ctx.beginPath(); ctx.moveTo(14, -2); ctx.lineTo(24, 3); ctx.lineTo(14, 8); ctx.fill();
                 ctx.restore();
@@ -135,14 +127,28 @@
             }
         }
 
+        function updateDifficulty() {
+            // 점수에 비례하여 난이도 계산 (최대치 설정으로 무한정 어려워지는 것 방지)
+            pipeSpeed = 2.2 + Math.min(score * 0.15, 2.8); // 2.2에서 최대 5.0까지 빨라짐
+            pipeGap = Math.max(160 - score * 3, 110);    // 160에서 최소 110까지 좁아짐
+            spawnInterval = Math.max(100 - score * 2, 65); // 기둥 생성 간격이 짧아짐
+
+            // 레벨 표시 및 배경색 변경
+            const level = Math.floor(score / 5) + 1;
+            levelTag.innerText = `LEVEL ${level}`;
+            if (score > 0 && score % 5 === 0) {
+                canvas.style.background = `hsl(${200 - score*2}, 70%, 75%)`;
+            }
+        }
+
         function spawnPipe() {
-            const gap = 150;
-            const top = Math.random() * (CH - gap - 100) + 50;
-            pipes.push({ x: CW, top: top, gap: gap, passed: false });
+            const minH = 50;
+            const top = Math.random() * (CH - pipeGap - minH * 2) + minH;
+            pipes.push({ x: CW, top: top, gap: pipeGap, passed: false });
         }
 
         function togglePause(e) {
-            e.stopPropagation(); // 버튼 클릭 시 점프 방지
+            e.stopPropagation();
             if (!gameActive) return;
             isPaused = !isPaused;
             pauseBtn.innerText = isPaused ? "계속" : "중지";
@@ -153,13 +159,11 @@
         function resetGame(e) {
             if(e) e.stopPropagation();
             bird = new Bird();
-            pipes = [];
-            score = 0;
-            frames = 0;
-            gameActive = true;
-            isPaused = false;
+            pipes = []; score = 0; frames = 0;
+            gameActive = true; isPaused = false;
+            canvas.style.background = "var(--sky)";
             overlay.style.display = "none";
-            pauseBtn.innerText = "중지";
+            updateDifficulty();
             document.getElementById("score").innerText = "0";
             requestAnimationFrame(loop);
         }
@@ -167,23 +171,22 @@
         function endGame() {
             gameActive = false;
             playSfx('hitSound');
-            if (score > bestScore) {
-                bestScore = score;
-                document.getElementById("best").innerText = bestScore;
-            }
-            document.getElementById("finalScore").innerText = `이번 기록: ${score}점`;
+            document.getElementById("finalScore").innerText = `${score}점 달성!`;
             overlay.style.display = "flex";
         }
 
         function loop() {
             if (!gameActive || isPaused) return;
 
-            ctx.fillStyle = "#87CEEB";
-            ctx.fillRect(0, 0, CW, CH);
+            ctx.clearRect(0, 0, CW, CH);
+            
+            // 난이도 업데이트
+            updateDifficulty();
 
-            if (frames % 100 === 0) spawnPipe();
+            if (frames % Math.floor(spawnInterval) === 0) spawnPipe();
+            
             pipes.forEach((p, i) => {
-                p.x -= 2.2;
+                p.x -= pipeSpeed;
                 ctx.fillStyle = "#8BC34A";
                 ctx.fillRect(p.x, 0, 50, p.top);
                 ctx.fillRect(p.x, p.top + p.gap, 50, CH);
@@ -207,15 +210,10 @@
             requestAnimationFrame(loop);
         }
 
-        // 모바일 터치 이벤트
         window.addEventListener("touchstart", (e) => {
-            // 버튼 클릭 시에는 점프하지 않음
             if(e.target.tagName === 'BUTTON') return;
-            e.preventDefault();
-            bird.jump();
+            e.preventDefault(); bird.jump();
         }, { passive: false });
-
-        // PC 클릭 및 스페이스
         window.addEventListener("mousedown", (e) => {
             if(e.target.tagName === 'BUTTON') return;
             bird.jump();
