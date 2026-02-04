@@ -3,216 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>2048 타일 게임</title>
+    <title>2048 Rounded & Smooth</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #fdf6e3;
-            --grid-bg: #c7b8a1;
-            --text-color: #776e65;
-            --point-color: #8f7a66;
+            --bg-color: #faf8ef;
+            --grid-bg: #bbada0;
+            --tile-bg: #cdc1b4;
+            --text-dark: #776e65;
+            --text-light: #f9f6f2;
+            --transition-speed: 130ms;
+            /* 라운드 값 통일 */
+            --radius-main: 12px;
+            --radius-tile: 8px;
         }
 
         body { 
-            background: var(--bg-color); 
-            display: flex; flex-direction: column; align-items: center; 
-            margin: 0; padding: 5px; font-family: 'Jua', sans-serif;
-            overflow: hidden; touch-action: none;
+            background: var(--bg-color); display: flex; flex-direction: column; align-items: center; 
+            margin: 0; padding: 10px; font-family: 'Jua', sans-serif;
+            overflow: hidden; touch-action: none; color: var(--text-dark);
         }
 
-        h1 { color: #5d544b; margin: 15px 0 10px 0; font-size: 2.2rem; text-shadow: 1px 1px #eee; }
-
-        .top-bar {
-            width: 90vw; max-width: 400px;
-            display: flex; justify-content: flex-end; align-items: center;
-            margin-bottom: 15px;
-        }
-
+        .header { width: 340px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .title { font-size: 52px; font-weight: bold; margin: 0; }
+        
+        .score-container { display: flex; gap: 8px; }
         .score-box { 
-            background: #bbaa9f; color: white; padding: 8px 30px; 
-            border-radius: 15px; text-align: center; box-shadow: 0 4px #8d7d73;
-            min-width: 120px;
+            background: #bbada0; padding: 8px 15px; border-radius: var(--radius-tile); min-width: 70px;
+            text-align: center; color: white;
         }
-        #score { font-size: 1.8rem; font-weight: bold; }
+        .score-label { font-size: 13px; font-weight: bold; opacity: 0.9; }
+        .score-value { font-size: 22px; font-weight: bold; }
 
-        #grid-container {
-            position: relative; width: 90vw; height: 90vw; max-width: 400px; max-height: 400px;
-            background: var(--grid-bg); padding: 12px; border-radius: 15px; 
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1); box-sizing: border-box;
-        }
-
-        #grid { 
-            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); 
-            gap: 10px; width: 100%; height: 100%; 
+        .controls { width: 340px; display: flex; justify-content: flex-end; margin: 15px 0; }
+        .btn { 
+            background: #8f7a66; color: white; border: none; padding: 12px 25px; 
+            border-radius: var(--radius-tile); cursor: pointer; font-weight: bold; font-family: 'Jua'; font-size: 1.1rem;
         }
 
-        .cell { 
-            background: rgba(238, 228, 218, 0.5); border-radius: 12px;
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 2.2rem; font-weight: bold; color: var(--text-color);
-            transition: transform 0.1s, background 0.1s;
+        #game-container {
+            position: relative; width: 340px; height: 340px;
+            background: var(--grid-bg); border-radius: var(--radius-main); padding: 12px; box-sizing: border-box;
         }
 
-        /* 숫자별 색상 디자인 */
-        .n-2 { background: #eee4da; box-shadow: 0 4px #d2c5b7; }
-        .n-4 { background: #ede0c8; box-shadow: 0 4px #d0c2a9; }
-        .n-8 { background: #f2b179; color: white; box-shadow: 0 4px #d69a66; }
-        .n-16 { background: #f59563; color: white; box-shadow: 0 4px #d67f53; }
-        .n-32 { background: #f67c5f; color: white; box-shadow: 0 4px #d4654b; }
-        .n-64 { background: #f65e3b; color: white; box-shadow: 0 4px #d14d2f; }
-        .n-128 { background: #edcf72; color: white; font-size: 1.8rem; box-shadow: 0 4px #c9af5e; }
-        .n-256 { background: #edcc61; color: white; font-size: 1.8rem; box-shadow: 0 4px #c9ad4e; }
+        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; width: 100%; height: 100%; }
+        .grid-cell { background: var(--tile-bg); border-radius: var(--radius-tile); }
 
-        #overlay {
+        .tile-container { position: absolute; z-index: 2; top: 12px; left: 12px; width: 316px; height: 316px; pointer-events: none; }
+        
+        .tile {
+            position: absolute; width: 70px; height: 70px; border-radius: var(--radius-tile);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; font-weight: bold;
+            transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        /* 숫자별 테마 */
+        .t-2 { background: #eee4da; color: var(--text-dark); }
+        .t-4 { background: #ede0c8; color: var(--text-dark); }
+        .t-8 { background: #f2b179; color: var(--text-light); }
+        .t-16 { background: #f59563; color: var(--text-light); }
+        .t-32 { background: #f67c5f; color: var(--text-light); }
+        .t-64 { background: #f65e3b; color: var(--text-light); }
+        .t-128 { background: #edcf72; color: var(--text-light); font-size: 28px; }
+        .t-256 { background: #edcc61; color: var(--text-light); font-size: 28px; }
+
+        /* 부드러운 생성 애니메이션 */
+        .tile-new { 
+            animation: soft-appear 200ms ease-out forwards;
+        }
+        
+        @keyframes soft-appear {
+            0% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+            100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
+        }
+
+        /* 합쳐질 때 팝 효과 */
+        .tile-merged { animation: pop 180ms ease-in-out; z-index: 10; }
+
+        @keyframes pop {
+            0% { transform: translate(var(--tx), var(--ty)) scale(1); }
+            50% { transform: translate(var(--tx), var(--ty)) scale(1.15); }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1); }
+        }
+
+        #game-over {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.9); display: none;
+            background: rgba(238, 228, 218, 0.8); display: none;
             flex-direction: column; align-items: center; justify-content: center;
-            border-radius: 15px; z-index: 20;
-        }
-
-        #restart-btn {
-            background: var(--point-color); color: white; border: none; padding: 15px 40px;
-            font-size: 1.8rem; border-radius: 15px; cursor: pointer; font-family: 'Jua';
-            box-shadow: 0 5px #5d544b;
+            border-radius: var(--radius-main); z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <h1>🧩 2048 타일 게임</h1>
-    
-    <div class="top-bar">
-        <div class="score-box">
-            <div style="font-size: 0.8rem; opacity: 0.9;">SCORE</div>
-            <div id="score">0</div>
+    <div class="header">
+        <h1 class="title">2048</h1>
+        <div class="score-container">
+            <div class="score-box">
+                <div class="score-label">SCORE</div>
+                <div id="score" class="score-value">0</div>
+            </div>
+            <div class="score-box">
+                <div class="score-label">BEST</div>
+                <div id="best" class="score-value">0</div>
+            </div>
         </div>
     </div>
 
-    <div id="grid-container">
-        <div id="grid"></div>
-        <div id="overlay">
-            <p style="font-size: 2.5rem; color: #776e65; margin-bottom: 20px;">우와! 끝났어요!</p>
-            <button id="restart-btn">한 번 더!</button>
+    <div class="controls">
+        <button class="btn" onclick="resetGame()">New Game</button>
+    </div>
+
+    <div id="game-container">
+        <div class="grid-container">
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        </div>
+        <div id="tile-container" class="tile-container"></div>
+        <div id="game-over">
+            <h2 style="font-size: 40px; margin-bottom: 20px;">Game Over!</h2>
+            <button class="btn" onclick="resetGame()">Try Again</button>
         </div>
     </div>
 
     <script>
-        let board = Array(4).fill().map(() => Array(4).fill(0));
+        let board = Array(4).fill().map(() => Array(4).fill(null));
         let score = 0;
+        let highScore = localStorage.getItem('2048_best_v2') || 0;
 
-        const grid = document.getElementById('grid');
-        const scoreDisplay = document.getElementById('score');
-        const overlay = document.getElementById('overlay');
+        const tileContainer = document.getElementById('tile-container');
+        const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
+        bestEl.innerText = highScore;
 
-        function init() {
-            board = Array(4).fill().map(() => Array(4).fill(0));
-            score = 0;
-            overlay.style.display = 'none';
-            for(let i=0; i<4; i++) generate(); // 숫자 4개로 시작
-            updateBoard();
+        class Tile {
+            constructor(r, c, val, isNew = true) {
+                this.r = r; this.c = c; this.val = val;
+                this.element = document.createElement('div');
+                this.element.innerText = val;
+                this.updateClass(isNew);
+                tileContainer.appendChild(this.element);
+                this.updateView();
+            }
+            updateClass(isNew = false) {
+                this.element.className = `tile t-${this.val} ${isNew ? 'tile-new' : ''}`;
+            }
+            updateView() {
+                const x = this.c * 82; 
+                const y = this.r * 82;
+                // CSS 변수로 좌표를 전달해 애니메이션 중에도 위치를 유지하게 함
+                this.element.style.setProperty('--tx', `${x}px`);
+                this.element.style.setProperty('--ty', `${y}px`);
+                this.element.style.transform = `translate(${x}px, ${y}px)`;
+            }
+            merge() {
+                this.val *= 2;
+                setTimeout(() => {
+                    this.element.innerText = this.val;
+                    this.updateClass();
+                    this.element.classList.add('tile-merged');
+                }, 100);
+            }
+            destroy() {
+                this.element.style.zIndex = 1;
+                setTimeout(() => this.element.remove(), 100);
+            }
         }
 
-        function updateBoard() {
-            grid.innerHTML = '';
-            board.flat().forEach(val => {
-                const cell = document.createElement('div');
-                cell.classList.add('cell');
-                if (val > 0) {
-                    cell.innerText = val;
-                    cell.classList.add('n-' + val);
-                }
-                grid.appendChild(cell);
-            });
-            scoreDisplay.innerText = score;
+        function resetGame() {
+            board.forEach(row => row.forEach(t => t && t.destroy()));
+            board = Array(4).fill().map(() => Array(4).fill(null));
+            score = 0; scoreEl.innerText = 0;
+            document.getElementById('game-over').style.display = 'none';
+            addRandomTile(); addRandomTile();
         }
 
-        function generate() {
+        function addRandomTile() {
             const empty = [];
-            board.forEach((r, ri) => r.forEach((c, ci) => { if(c===0) empty.push({ri, ci}) }));
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(!board[r][c]) empty.push({r, c});
             if (empty.length > 0) {
-                const {ri, ci} = empty[Math.floor(Math.random() * empty.length)];
-                board[ri][ci] = Math.random() > 0.1 ? 2 : 4;
+                const {r, c} = empty[Math.floor(Math.random() * empty.length)];
+                board[r][c] = new Tile(r, c, Math.random() < 0.9 ? 2 : 4, true);
             }
-        }
-
-        function slide(row) {
-            let filtered = row.filter(x => x > 0);
-            for (let i = 0; i < filtered.length - 1; i++) {
-                if (filtered[i] === filtered[i+1]) {
-                    filtered[i] *= 2;
-                    score += filtered[i];
-                    filtered[i+1] = 0;
-                }
-            }
-            filtered = filtered.filter(x => x > 0);
-            while (filtered.length < 4) filtered.push(0);
-            return filtered;
         }
 
         function move(dir) {
-            const prev = JSON.stringify(board);
-            if (dir === 'left') board = board.map(r => slide(r));
-            if (dir === 'right') board = board.map(r => slide([...r].reverse()).reverse());
-            if (dir === 'up') {
-                for(let c=0; c<4; c++) {
-                    let col = slide([board[0][c], board[1][c], board[2][c], board[3][c]]);
-                    for(let r=0; r<4; r++) board[r][c] = col[r];
+            let moved = false;
+            const isVert = dir === 'up' || dir === 'down';
+            const isRev = dir === 'right' || dir === 'down';
+            
+            for (let i = 0; i < 4; i++) {
+                let line = [];
+                for (let j = 0; j < 4; j++) {
+                    let r = isVert ? j : i;
+                    let c = isVert ? i : j;
+                    if (board[r][c]) {
+                        board[r][c].element.classList.remove('tile-new', 'tile-merged');
+                        line.push(board[r][c]);
+                    }
                 }
-            }
-            if (dir === 'down') {
-                for(let c=0; c<4; c++) {
-                    let col = slide([board[0][c], board[1][c], board[2][c], board[3][c]].reverse()).reverse();
-                    for(let r=0; r<4; r++) board[r][c] = col[r];
+                if (isRev) line.reverse();
+
+                let newLine = [];
+                for (let j = 0; j < line.length; j++) {
+                    if (line[j+1] && line[j].val === line[j+1].val) {
+                        line[j].merge();
+                        score += line[j].val;
+                        line[j+1].destroy();
+                        newLine.push(line[j]);
+                        j++;
+                        moved = true;
+                    } else {
+                        newLine.push(line[j]);
+                    }
+                }
+                while (newLine.length < 4) newLine.push(null);
+                if (isRev) newLine.reverse();
+
+                for (let j = 0; j < 4; j++) {
+                    let r = isVert ? j : i;
+                    let c = isVert ? i : j;
+                    if (board[r][c] !== newLine[j]) {
+                        if (newLine[j]) {
+                            newLine[j].r = r; newLine[j].c = c;
+                            newLine[j].updateView();
+                        }
+                        board[r][c] = newLine[j];
+                        moved = true;
+                    }
                 }
             }
 
-            if (prev !== JSON.stringify(board)) {
-                generate();
-                updateBoard();
-                if(checkGameOver()) overlay.style.display = 'flex';
+            if (moved) {
+                scoreEl.innerText = score;
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('2048_best_v2', highScore);
+                    bestEl.innerText = highScore;
+                }
+                // 이동이 끝나는 시점에 맞춰 새 타일 생성 (자연스러움의 핵심)
+                setTimeout(addRandomTile, 150);
+                if (checkGameOver()) document.getElementById('game-over').style.display = 'flex';
             }
         }
 
         function checkGameOver() {
-            if (board.flat().includes(0)) return false;
+            if (board.flat().includes(null)) return false;
             for(let r=0; r<4; r++) {
                 for(let c=0; c<4; c++) {
-                    if (c<3 && board[r][c] === board[r][c+1]) return false;
-                    if (r<3 && board[r][c] === board[r+1][c]) return false;
+                    if (c<3 && board[r][c].val === board[r][c+1].val) return false;
+                    if (r<3 && board[r][c].val === board[r+1][c].val) return false;
                 }
             }
             return true;
         }
 
         window.onkeydown = (e) => {
-            if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+            if (e.key.includes("Arrow")) {
                 e.preventDefault();
-                move(e.key.replace("Arrow","").toLowerCase());
+                move(e.key.replace("Arrow", "").toLowerCase());
             }
         };
 
-        // 스와이프(터치) 컨트롤
-        let startX, startY;
-        document.addEventListener('touchstart', e => { 
-            startX = e.touches[0].clientX; 
-            startY = e.touches[0].clientY; 
-        }, {passive: false});
-
-        document.addEventListener('touchend', e => {
-            if (!startX || !startY) return;
-            const diffX = e.changedTouches[0].clientX - startX;
-            const diffY = e.changedTouches[0].clientY - startY;
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > 30) move(diffX > 0 ? 'right' : 'left');
-            } else {
-                if (Math.abs(diffY) > 30) move(diffY > 0 ? 'down' : 'up');
-            }
-            startX = startY = null;
-        });
-
-        document.getElementById('restart-btn').onclick = init;
-        init();
+        resetGame();
     </script>
 </body>
 </html>
