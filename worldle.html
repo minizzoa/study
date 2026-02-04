@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>단어 맞히기 퀴즈</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #fdf6e3;
+            --tile-empty: #ffffff;
+            --tile-correct: #6aaa64;
+            --tile-present: #c9b458;
+            --tile-absent: #787c7e;
+            --text-color: #5d544b;
+        }
+
+        body { 
+            background: var(--bg-color); 
+            display: flex; flex-direction: column; align-items: center; 
+            margin: 0; padding: 10px; font-family: 'Jua', sans-serif;
+            color: var(--text-color);
+        }
+
+        /* 제목 이모지 변경 */
+        h1 { margin: 10px 0; font-size: 2.5rem; text-shadow: 1px 1px #eee; }
+
+        .top-bar { width: 100%; max-width: 350px; display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+        #restart-btn {
+            background: #8f7a66; color: white; border: none; padding: 8px 15px;
+            border-radius: 10px; cursor: pointer; font-family: 'Jua'; font-size: 1rem;
+            box-shadow: 0 3px #5d544b;
+        }
+
+        #game-container {
+            display: grid; grid-template-rows: repeat(6, 1fr); gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+
+        .tile {
+            width: 60px; height: 60px; border: 2px solid #d3d6da;
+            background: var(--tile-empty); display: flex; align-items: center;
+            justify-content: center; font-size: 2rem; font-weight: bold;
+            text-transform: uppercase; border-radius: 10px; transition: 0.3s;
+        }
+
+        .correct { background: var(--tile-correct); border-color: var(--tile-correct); color: white; }
+        .present { background: var(--tile-present); border-color: var(--tile-present); color: white; }
+        .absent { background: var(--tile-absent); border-color: var(--tile-absent); color: white; }
+
+        #message { 
+            height: 50px; margin-top: 10px; font-size: 2rem; 
+            font-weight: bold; color: #d35400; text-align: center;
+        }
+
+        .tip-container {
+            width: 90vw; max-width: 350px; background: white; padding: 15px;
+            border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-size: 0.95rem;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎈 단어 맞히기 ✨</h1>
+
+    <div class="top-bar">
+        <button id="restart-btn" onclick="init()">다시 시작</button>
+    </div>
+    
+    <div id="game-container"></div>
+    <div id="message"></div>
+
+    <div class="tip-container">
+        <b style="color: #8f7a66;">💡 게임 방법</b>
+        <p style="margin: 5px 0;">키보드로 5글자 영단어를 입력하고 <b>Enter</b>를 누르세요!</p>
+        <p style="font-size: 0.85rem; color: #888;">* 정답 사운드를 위해 게임 시작 후 키를 누르면 소리가 활성화됩니다.</p>
+    </div>
+
+    <audio id="winSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const wordList = ["APPLE", "BREAD", "CLOUD", "DREAM", "FRUIT", "GRAPE", "HOUSE", "LIGHT", "MUSIC", "SMILE", "WATER", "PIANO"];
+        let secretWord = "";
+        let currentGuess = "";
+        let attempts = 0;
+        let gameOver = false;
+        let audioUnlocked = false;
+
+        const container = document.getElementById('game-container');
+        const winSound = document.getElementById('winSound');
+
+        function init() {
+            container.innerHTML = "";
+            secretWord = wordList[Math.floor(Math.random() * wordList.length)];
+            currentGuess = "";
+            attempts = 0;
+            gameOver = false;
+            document.getElementById('message').innerText = "";
+            
+            for (let i = 0; i < 6; i++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                for (let j = 0; j < 5; j++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    row.appendChild(tile);
+                }
+                container.appendChild(row);
+            }
+        }
+
+        // 사운드 잠금 해제 함수 (브라우저 정책 대응)
+        function unlockAudio() {
+            if (!audioUnlocked) {
+                winSound.play().then(() => {
+                    winSound.pause();
+                    winSound.currentTime = 0;
+                    audioUnlocked = true;
+                }).catch(e => console.log("사운드 준비 중..."));
+            }
+        }
+
+        window.onkeydown = (e) => {
+            unlockAudio(); // 아무 키나 누르면 오디오 재생 가능 상태로 변경
+            if (gameOver) return;
+            const key = e.key.toUpperCase();
+
+            if (key === 'ENTER') submitGuess();
+            else if (key === 'BACKSPACE') deleteLetter();
+            else if (currentGuess.length < 5 && /^[A-Z]$/.test(key)) addLetter(key);
+        };
+
+        function addLetter(letter) {
+            currentGuess += letter;
+            updateTiles();
+        }
+
+        function deleteLetter() {
+            currentGuess = currentGuess.slice(0, -1);
+            updateTiles();
+        }
+
+        function updateTiles() {
+            const rows = document.getElementsByClassName('row');
+            const tiles = rows[attempts].getElementsByClassName('tile');
+            for (let i = 0; i < 5; i++) {
+                tiles[i].innerText = currentGuess[i] || "";
+            }
+        }
+
+        function submitGuess() {
+            if (currentGuess.length !== 5) return;
+            
+            const rows = document.getElementsByClassName('row');
+            const tiles = rows[attempts].getElementsByClassName('tile');
+            const guessArr = currentGuess.split("");
+            const secretArr = secretWord.split("");
+
+            guessArr.forEach((letter, i) => {
+                setTimeout(() => {
+                    if (letter === secretArr[i]) tiles[i].classList.add('correct');
+                    else if (secretArr.includes(letter)) tiles[i].classList.add('present');
+                    else tiles[i].classList.add('absent');
+                }, i * 150);
+            });
+
+            if (currentGuess === secretWord) {
+                setTimeout(() => {
+                    document.getElementById('message').innerText = "🎈 정답입니다! ✨";
+                    confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+                    winSound.play().catch(e => console.log("사운드 재생 오류:", e));
+                    gameOver = true;
+                }, 800);
+            } else if (attempts === 5) {
+                setTimeout(() => {
+                    document.getElementById('message').innerText = `정답은: ${secretWord}`;
+                    gameOver = true;
+                }, 800);
+            } else {
+                attempts++;
+                currentGuess = "";
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
