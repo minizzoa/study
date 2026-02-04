@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>날아라 삐약이! ✨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky: #87CEEB;
+            --btn-main: #ff8b94;
+        }
+        body { 
+            margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; 
+            background: #fdf6e3; font-family: 'Jua', sans-serif; overflow: hidden;
+            /* 모바일 드래그 및 롱터치 방지 */
+            touch-action: none; -webkit-user-select: none; user-select: none;
+        }
+
+        h1 { margin: 10px 0 5px 0; color: #ff8b94; font-size: 1.8rem; }
+
+        .status-bar {
+            width: 90vw; max-width: 360px; display: flex; justify-content: space-between; 
+            align-items: center; margin-bottom: 10px; background: white; 
+            padding: 8px 15px; border-radius: 12px; box-sizing: border-box;
+        }
+        .score-info { font-size: 1rem; color: #5d544b; }
+
+        .controls { display: flex; gap: 5px; }
+        button {
+            padding: 6px 12px; border: none; border-radius: 8px; font-family: 'Jua';
+            font-size: 0.9rem; cursor: pointer; color: white;
+        }
+        .btn-pause { background: #feb236; }
+        .btn-restart { background: #ff7b25; }
+
+        #game-container { position: relative; width: 90vw; height: 70vh; max-width: 360px; max-height: 500px; }
+        canvas { 
+            background: var(--sky); border-radius: 15px; width: 100%; height: 100%;
+            display: block; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.85); display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 15px; z-index: 10;
+        }
+        
+        .guide { margin-top: 10px; color: #888; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <h1>🐤 날아라 삐약이! 🚀</h1>
+
+    <div class="status-bar">
+        <div class="score-info">점수: <span id="score">0</span> | 최고: <span id="best">0</span></div>
+        <div class="controls">
+            <button class="btn-pause" onclick="togglePause(event)" id="pauseBtn">중지</button>
+            <button class="btn-restart" onclick="resetGame(event)">다시 시작</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="overlay">
+            <h2 style="font-size: 2rem; color: #ff8b94; margin: 0;">삐약... 털썩!</h2>
+            <p id="finalScore" style="font-size: 1.2rem; margin: 10px 0;"></p>
+            <button class="btn-restart" onclick="resetGame(event)" style="padding: 12px 25px; font-size: 1.2rem; background: var(--btn-main);">다시 도전!</button>
+        </div>
+    </div>
+    
+    <p class="guide">화면 어디든 터치하면 삐약이가 날아올라요!</p>
+
+    <audio id="jumpSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
+    <audio id="scoreSound" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
+    <audio id="hitSound" src="https://assets.mixkit.co/active_storage/sfx/2533/2533-preview.mp3" preload="auto"></audio>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const pauseBtn = document.getElementById("pauseBtn");
+        const overlay = document.getElementById("overlay");
+        
+        // 캔버스 크기 고정 (좌표 계산용)
+        const CW = 360;
+        const CH = 500;
+        canvas.width = CW;
+        canvas.height = CH;
+
+        let bird, pipes, score, bestScore = 0, frames, gameActive, isPaused;
+
+        function playSfx(id) {
+            const sound = document.getElementById(id);
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        }
+
+        class Bird {
+            constructor() {
+                this.x = 60;
+                this.y = CH / 2;
+                this.v = 0;
+                this.gravity = 0.22;
+                this.jumpPower = -4.8;
+                this.radius = 16;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                // 속도에 따라 몸을 살짝 기울임
+                ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.v * 0.1)));
+                
+                // 몸통
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "#FFEB3B"; ctx.fill();
+                ctx.strokeStyle = "#FBC02D"; ctx.lineWidth = 3; ctx.stroke();
+                // 눈/부리
+                ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#FF9800"; ctx.beginPath(); ctx.moveTo(14, -2); ctx.lineTo(24, 3); ctx.lineTo(14, 8); ctx.fill();
+                ctx.restore();
+            }
+            update() {
+                if (isPaused) return;
+                this.v += this.gravity;
+                this.y += this.v;
+                if (this.y + this.radius > CH) endGame();
+                if (this.y - this.radius < 0) { this.y = this.radius; this.v = 0; }
+            }
+            jump() {
+                if (isPaused || !gameActive) return;
+                this.v = this.jumpPower;
+                playSfx('jumpSound');
+            }
+        }
+
+        function spawnPipe() {
+            const gap = 150;
+            const top = Math.random() * (CH - gap - 100) + 50;
+            pipes.push({ x: CW, top: top, gap: gap, passed: false });
+        }
+
+        function togglePause(e) {
+            e.stopPropagation(); // 버튼 클릭 시 점프 방지
+            if (!gameActive) return;
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "계속" : "중지";
+            pauseBtn.style.background = isPaused ? "#4caf50" : "#feb236";
+            if (!isPaused) requestAnimationFrame(loop);
+        }
+
+        function resetGame(e) {
+            if(e) e.stopPropagation();
+            bird = new Bird();
+            pipes = [];
+            score = 0;
+            frames = 0;
+            gameActive = true;
+            isPaused = false;
+            overlay.style.display = "none";
+            pauseBtn.innerText = "중지";
+            document.getElementById("score").innerText = "0";
+            requestAnimationFrame(loop);
+        }
+
+        function endGame() {
+            gameActive = false;
+            playSfx('hitSound');
+            if (score > bestScore) {
+                bestScore = score;
+                document.getElementById("best").innerText = bestScore;
+            }
+            document.getElementById("finalScore").innerText = `이번 기록: ${score}점`;
+            overlay.style.display = "flex";
+        }
+
+        function loop() {
+            if (!gameActive || isPaused) return;
+
+            ctx.fillStyle = "#87CEEB";
+            ctx.fillRect(0, 0, CW, CH);
+
+            if (frames % 100 === 0) spawnPipe();
+            pipes.forEach((p, i) => {
+                p.x -= 2.2;
+                ctx.fillStyle = "#8BC34A";
+                ctx.fillRect(p.x, 0, 50, p.top);
+                ctx.fillRect(p.x, p.top + p.gap, 50, CH);
+                
+                if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + 50) {
+                    if (bird.y - bird.radius < p.top || bird.y + bird.radius > p.top + p.gap) endGame();
+                }
+
+                if (p.x + 50 < bird.x && !p.passed) {
+                    score++;
+                    p.passed = true;
+                    document.getElementById("score").innerText = score;
+                    playSfx('scoreSound');
+                }
+                if (p.x < -50) pipes.splice(i, 1);
+            });
+
+            bird.update();
+            bird.draw();
+            frames++;
+            requestAnimationFrame(loop);
+        }
+
+        // 모바일 터치 이벤트
+        window.addEventListener("touchstart", (e) => {
+            // 버튼 클릭 시에는 점프하지 않음
+            if(e.target.tagName === 'BUTTON') return;
+            e.preventDefault();
+            bird.jump();
+        }, { passive: false });
+
+        // PC 클릭 및 스페이스
+        window.addEventListener("mousedown", (e) => {
+            if(e.target.tagName === 'BUTTON') return;
+            bird.jump();
+        });
+        window.addEventListener("keydown", (e) => { if (e.code === "Space") bird.jump(); });
+
+        resetGame();
+    </script>
+</body>
+</html>
