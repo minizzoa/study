@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>2048 Mobile Smooth</title>
+    <title>2048 Bright & Clear</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #faf8ef;
-            --grid-bg: #bbada0;
-            --tile-bg: #cdc1b4;
-            --text-dark: #776e65;
-            --text-light: #f9f6f2;
+            --bg-color: #fbf9f2; /* 더 밝은 전체 배경 */
+            --grid-bg: #9e8e7e; /* 격자 배경을 조금 더 어둡게 하여 타일 부각 */
+            --tile-bg: #d6cdc4; /* 빈 칸 색상 */
+            --text-dark: #4a453f; /* 짙은 텍스트로 가독성 확보 */
+            --text-light: #ffffff;
             --transition-speed: 130ms;
-            --radius-main: 12px;
-            --radius-tile: 8px;
+            --radius-main: 15px;
+            --radius-tile: 10px;
         }
 
-        /* 모바일에서 불필요한 스크롤과 터치 하이라이트를 제거합니다 */
-        * { -webkit-tap-highlight-color: transparent; touch-action: none; }
+        * { -webkit-tap-highlight-color: transparent; touch-action: none; box-sizing: border-box; }
 
         body { 
             background: var(--bg-color); display: flex; flex-direction: column; align-items: center; 
@@ -26,68 +25,78 @@
             overflow: hidden; height: 100vh; color: var(--text-dark);
         }
 
-        .header { width: 100%; max-width: 340px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .title { font-size: 40px; font-weight: bold; margin: 0; }
+        .header { width: 100%; max-width: 360px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .title { font-size: 48px; font-weight: bold; margin: 0; color: #8f7a66; }
         
-        .score-container { display: flex; gap: 5px; }
+        .score-container { display: flex; gap: 8px; }
         .score-box { 
-            background: #bbada0; padding: 5px 10px; border-radius: var(--radius-tile); min-width: 60px;
+            background: #8f7a66; padding: 8px 12px; border-radius: 8px; min-width: 75px;
             text-align: center; color: white;
         }
-        .score-label { font-size: 11px; font-weight: bold; opacity: 0.9; }
-        .score-value { font-size: 18px; font-weight: bold; }
+        .score-label { font-size: 12px; font-weight: bold; opacity: 0.9; }
+        .score-value { font-size: 20px; font-weight: bold; }
 
-        .controls { width: 100%; max-width: 340px; display: flex; justify-content: flex-end; margin: 10px 0; }
+        .controls { width: 100%; max-width: 360px; display: flex; justify-content: flex-end; margin: 15px 0; }
         .btn { 
-            background: #8f7a66; color: white; border: none; padding: 10px 20px; 
-            border-radius: var(--radius-tile); cursor: pointer; font-weight: bold; font-family: 'Jua';
+            background: #776e65; color: white; border: none; padding: 12px 24px; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Jua'; font-size: 1.1rem;
+            box-shadow: 0 4px 0 #5a534c;
         }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #5a534c; }
 
         #game-container {
-            position: relative; width: 90vw; height: 90vw; max-width: 340px; max-height: 340px;
-            background: var(--grid-bg); border-radius: var(--radius-main); padding: 10px; box-sizing: border-box;
+            position: relative; width: 92vw; height: 92vw; max-width: 360px; max-height: 360px;
+            background: var(--grid-bg); border-radius: var(--radius-main); padding: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
         }
 
-        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 10px; width: 100%; height: 100%; }
+        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; width: 100%; height: 100%; }
         .grid-cell { background: var(--tile-bg); border-radius: var(--radius-tile); }
 
-        .tile-container { position: absolute; z-index: 2; top: 10px; left: 10px; bottom: 10px; right: 10px; pointer-events: none; }
+        .tile-container { position: absolute; z-index: 2; top: 12px; left: 12px; bottom: 12px; right: 12px; pointer-events: none; }
         
         .tile {
-            position: absolute; width: calc((100% - 30px) / 4); height: calc((100% - 30px) / 4);
+            position: absolute; width: calc((100% - 36px) / 4); height: calc((100% - 36px) / 4);
             border-radius: var(--radius-tile); display: flex; align-items: center; justify-content: center;
-            font-size: 28px; font-weight: bold;
+            font-size: 32px; font-weight: bold;
             transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        .t-2 { background: #eee4da; color: var(--text-dark); }
-        .t-4 { background: #ede0c8; color: var(--text-dark); }
-        .t-8 { background: #f2b179; color: var(--text-light); }
-        .t-16 { background: #f59563; color: var(--text-light); }
-        .t-32 { background: #f67c5f; color: var(--text-light); }
-        .t-64 { background: #f65e3b; color: var(--text-light); }
-        .t-128 { background: #edcf72; color: var(--text-light); font-size: 24px; }
-        .t-256 { background: #edcc61; color: var(--text-light); font-size: 24px; }
+        /* 명확하고 밝은 컬러 테마 */
+        .t-2 { background: #ffffff; color: #444; } /* 순백색 */
+        .t-4 { background: #fff9eb; color: #444; } /* 연한 노랑 */
+        .t-8 { background: #ffcc80; color: #fff; } /* 오렌지 */
+        .t-16 { background: #ffab91; color: #fff; } /* 다홍 */
+        .t-32 { background: #f48fb1; color: #fff; } /* 핑크 */
+        .t-64 { background: #ce93d8; color: #fff; } /* 보라 */
+        .t-128 { background: #81d4fa; color: #fff; font-size: 28px; } /* 하늘 */
+        .t-256 { background: #80cbc4; color: #fff; font-size: 28px; } /* 민트 */
+        .t-512 { background: #a5d6a7; color: #fff; font-size: 28px; } /* 연두 */
+        .t-1024 { background: #fff59d; color: #8f7a66; font-size: 24px; } /* 밝은 노랑 */
+        .t-2048 { background: #fdd835; color: #fff; font-size: 24px; box-shadow: 0 0 15px #fdd835; }
 
         .tile-new { animation: soft-appear 200ms ease-out forwards; }
         @keyframes soft-appear {
-            0% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+            0% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.5); }
             100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
         }
 
         .tile-merged { animation: pop 180ms ease-in-out; z-index: 10; }
         @keyframes pop {
             0% { transform: translate(var(--tx), var(--ty)) scale(1); }
-            50% { transform: translate(var(--tx), var(--ty)) scale(1.15); }
+            50% { transform: translate(var(--tx), var(--ty)) scale(1.18); }
             100% { transform: translate(var(--tx), var(--ty)) scale(1); }
         }
 
+        /* 게임 종료 화면 스타일 상향 */
         #game-over {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(238, 228, 218, 0.85); display: none;
+            background: rgba(0, 0, 0, 0.6); display: none;
             flex-direction: column; align-items: center; justify-content: center;
             border-radius: var(--radius-main); z-index: 100;
+            color: white; text-align: center; backdrop-filter: blur(4px);
         }
     </style>
 </head>
@@ -108,7 +117,7 @@
     </div>
 
     <div class="controls">
-        <button class="btn" onclick="resetGame()">New Game</button>
+        <button class="btn" onclick="resetGame()">RESTART</button>
     </div>
 
     <div id="game-container">
@@ -120,7 +129,8 @@
         </div>
         <div id="tile-container" class="tile-container"></div>
         <div id="game-over">
-            <h2 style="font-size: 32px; margin-bottom: 20px;">Game Over!</h2>
+            <h2 style="font-size: 48px; margin-bottom: 10px;">Oops!</h2>
+            <p style="font-size: 20px; margin-bottom: 25px;">No more moves left.</p>
             <button class="btn" onclick="resetGame()">Try Again</button>
         </div>
     </div>
@@ -128,7 +138,7 @@
     <script>
         let board = Array(4).fill().map(() => Array(4).fill(null));
         let score = 0;
-        let highScore = localStorage.getItem('2048_mobile_best') || 0;
+        let highScore = localStorage.getItem('2048_bright_best') || 0;
 
         const tileContainer = document.getElementById('tile-container');
         const scoreEl = document.getElementById('score');
@@ -148,12 +158,10 @@
                 this.element.className = `tile t-${this.val} ${isNew ? 'tile-new' : ''}`;
             }
             updateView() {
-                // 모바일 반응형 대응을 위해 퍼센트와 계산식 사용
-                const step = 100 / 4;
-                const gap = 13.3; // 10px 간격 보정치
-                const x = this.c * 100 + (this.c * gap);
-                const y = this.r * 100 + (this.r * gap);
-                
+                const step = 100;
+                const gap = 13.5; 
+                const x = this.c * step + (this.c * gap);
+                const y = this.r * step + (this.r * gap);
                 this.element.style.setProperty('--tx', `${x}%`);
                 this.element.style.setProperty('--ty', `${y}%`);
                 this.element.style.transform = `translate(${x}%, ${y}%)`;
@@ -240,26 +248,37 @@
                 scoreEl.innerText = score;
                 if (score > highScore) {
                     highScore = score;
-                    localStorage.setItem('2048_mobile_best', highScore);
+                    localStorage.setItem('2048_bright_best', highScore);
                     bestEl.innerText = highScore;
                 }
-                setTimeout(addRandomTile, 150);
-                if (checkGameOver()) document.getElementById('game-over').style.display = 'flex';
+                setTimeout(() => {
+                    addRandomTile();
+                    // 타일 생성 후 게임 오버 판정
+                    if (checkGameOver()) {
+                        document.getElementById('game-over').style.display = 'flex';
+                    }
+                }, 150);
             }
         }
 
+        // 게임 오버 판정 로직: 빈 칸이 없고, 인접한 타일끼리 합칠 수 없을 때
         function checkGameOver() {
+            // 1. 빈 칸이 있는지 확인
             if (board.flat().includes(null)) return false;
-            for(let r=0; r<4; r++) {
-                for(let c=0; c<4; c++) {
-                    if (c<3 && board[r][c].val === board[r][c+1].val) return false;
-                    if (r<3 && board[r][c].val === board[r+1][c].val) return false;
+
+            // 2. 가로/세로로 합칠 수 있는 타일이 있는지 확인
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const current = board[r][c].val;
+                    // 오른쪽 확인
+                    if (c < 3 && current === board[r][c+1].val) return false;
+                    // 아래쪽 확인
+                    if (r < 3 && current === board[r+1][c].val) return false;
                 }
             }
-            return true;
+            return true; // 아무것도 할 수 없으면 게임 종료
         }
 
-        // 키보드 제어
         window.onkeydown = (e) => {
             if (e.key.includes("Arrow")) {
                 e.preventDefault();
@@ -267,37 +286,18 @@
             }
         };
 
-        // 모바일 스와이프 제어
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        document.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: false });
-
-        document.addEventListener('touchend', (e) => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-
-            const dx = touchEndX - touchStartX;
-            const dy = touchEndY - touchStartY;
-
-            const absDx = Math.abs(dx);
-            const absDy = Math.abs(dy);
-
-            // 최소 30px 이상 움직였을 때만 동작 (터치 실수 방지)
-            if (Math.max(absDx, absDy) > 30) {
-                if (absDx > absDy) {
-                    move(dx > 0 ? 'right' : 'left');
-                } else {
-                    move(dy > 0 ? 'down' : 'up');
-                }
+        // 모바일 스와이프
+        let sX, sY;
+        document.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; }, {passive: false});
+        document.addEventListener('touchend', e => {
+            let dX = e.changedTouches[0].clientX - sX;
+            let dY = e.changedTouches[0].clientY - sY;
+            if (Math.max(Math.abs(dX), Math.abs(dY)) > 30) {
+                if (Math.abs(dX) > Math.abs(dY)) move(dX > 0 ? 'right' : 'left');
+                else move(dY > 0 ? 'down' : 'up');
             }
-        }, { passive: false });
-
-        // 화면 밀림 방지
-        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        }, {passive: false});
+        document.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
 
         resetGame();
     </script>
