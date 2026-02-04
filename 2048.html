@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>2048 Rounded & Smooth</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>2048 Mobile Smooth</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,75 +13,70 @@
             --text-dark: #776e65;
             --text-light: #f9f6f2;
             --transition-speed: 130ms;
-            /* 라운드 값 통일 */
             --radius-main: 12px;
             --radius-tile: 8px;
         }
 
+        /* 모바일에서 불필요한 스크롤과 터치 하이라이트를 제거합니다 */
+        * { -webkit-tap-highlight-color: transparent; touch-action: none; }
+
         body { 
             background: var(--bg-color); display: flex; flex-direction: column; align-items: center; 
             margin: 0; padding: 10px; font-family: 'Jua', sans-serif;
-            overflow: hidden; touch-action: none; color: var(--text-dark);
+            overflow: hidden; height: 100vh; color: var(--text-dark);
         }
 
-        .header { width: 340px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
-        .title { font-size: 52px; font-weight: bold; margin: 0; }
+        .header { width: 100%; max-width: 340px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .title { font-size: 40px; font-weight: bold; margin: 0; }
         
-        .score-container { display: flex; gap: 8px; }
+        .score-container { display: flex; gap: 5px; }
         .score-box { 
-            background: #bbada0; padding: 8px 15px; border-radius: var(--radius-tile); min-width: 70px;
+            background: #bbada0; padding: 5px 10px; border-radius: var(--radius-tile); min-width: 60px;
             text-align: center; color: white;
         }
-        .score-label { font-size: 13px; font-weight: bold; opacity: 0.9; }
-        .score-value { font-size: 22px; font-weight: bold; }
+        .score-label { font-size: 11px; font-weight: bold; opacity: 0.9; }
+        .score-value { font-size: 18px; font-weight: bold; }
 
-        .controls { width: 340px; display: flex; justify-content: flex-end; margin: 15px 0; }
+        .controls { width: 100%; max-width: 340px; display: flex; justify-content: flex-end; margin: 10px 0; }
         .btn { 
-            background: #8f7a66; color: white; border: none; padding: 12px 25px; 
-            border-radius: var(--radius-tile); cursor: pointer; font-weight: bold; font-family: 'Jua'; font-size: 1.1rem;
+            background: #8f7a66; color: white; border: none; padding: 10px 20px; 
+            border-radius: var(--radius-tile); cursor: pointer; font-weight: bold; font-family: 'Jua';
         }
 
         #game-container {
-            position: relative; width: 340px; height: 340px;
-            background: var(--grid-bg); border-radius: var(--radius-main); padding: 12px; box-sizing: border-box;
+            position: relative; width: 90vw; height: 90vw; max-width: 340px; max-height: 340px;
+            background: var(--grid-bg); border-radius: var(--radius-main); padding: 10px; box-sizing: border-box;
         }
 
-        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; width: 100%; height: 100%; }
+        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 10px; width: 100%; height: 100%; }
         .grid-cell { background: var(--tile-bg); border-radius: var(--radius-tile); }
 
-        .tile-container { position: absolute; z-index: 2; top: 12px; left: 12px; width: 316px; height: 316px; pointer-events: none; }
+        .tile-container { position: absolute; z-index: 2; top: 10px; left: 10px; bottom: 10px; right: 10px; pointer-events: none; }
         
         .tile {
-            position: absolute; width: 70px; height: 70px; border-radius: var(--radius-tile);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 32px; font-weight: bold;
+            position: absolute; width: calc((100% - 30px) / 4); height: calc((100% - 30px) / 4);
+            border-radius: var(--radius-tile); display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: bold;
             transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform;
         }
 
-        /* 숫자별 테마 */
         .t-2 { background: #eee4da; color: var(--text-dark); }
         .t-4 { background: #ede0c8; color: var(--text-dark); }
         .t-8 { background: #f2b179; color: var(--text-light); }
         .t-16 { background: #f59563; color: var(--text-light); }
         .t-32 { background: #f67c5f; color: var(--text-light); }
         .t-64 { background: #f65e3b; color: var(--text-light); }
-        .t-128 { background: #edcf72; color: var(--text-light); font-size: 28px; }
-        .t-256 { background: #edcc61; color: var(--text-light); font-size: 28px; }
+        .t-128 { background: #edcf72; color: var(--text-light); font-size: 24px; }
+        .t-256 { background: #edcc61; color: var(--text-light); font-size: 24px; }
 
-        /* 부드러운 생성 애니메이션 */
-        .tile-new { 
-            animation: soft-appear 200ms ease-out forwards;
-        }
-        
+        .tile-new { animation: soft-appear 200ms ease-out forwards; }
         @keyframes soft-appear {
             0% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
             100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
         }
 
-        /* 합쳐질 때 팝 효과 */
         .tile-merged { animation: pop 180ms ease-in-out; z-index: 10; }
-
         @keyframes pop {
             0% { transform: translate(var(--tx), var(--ty)) scale(1); }
             50% { transform: translate(var(--tx), var(--ty)) scale(1.15); }
@@ -90,7 +85,7 @@
 
         #game-over {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(238, 228, 218, 0.8); display: none;
+            background: rgba(238, 228, 218, 0.85); display: none;
             flex-direction: column; align-items: center; justify-content: center;
             border-radius: var(--radius-main); z-index: 100;
         }
@@ -125,7 +120,7 @@
         </div>
         <div id="tile-container" class="tile-container"></div>
         <div id="game-over">
-            <h2 style="font-size: 40px; margin-bottom: 20px;">Game Over!</h2>
+            <h2 style="font-size: 32px; margin-bottom: 20px;">Game Over!</h2>
             <button class="btn" onclick="resetGame()">Try Again</button>
         </div>
     </div>
@@ -133,7 +128,7 @@
     <script>
         let board = Array(4).fill().map(() => Array(4).fill(null));
         let score = 0;
-        let highScore = localStorage.getItem('2048_best_v2') || 0;
+        let highScore = localStorage.getItem('2048_mobile_best') || 0;
 
         const tileContainer = document.getElementById('tile-container');
         const scoreEl = document.getElementById('score');
@@ -153,12 +148,15 @@
                 this.element.className = `tile t-${this.val} ${isNew ? 'tile-new' : ''}`;
             }
             updateView() {
-                const x = this.c * 82; 
-                const y = this.r * 82;
-                // CSS 변수로 좌표를 전달해 애니메이션 중에도 위치를 유지하게 함
-                this.element.style.setProperty('--tx', `${x}px`);
-                this.element.style.setProperty('--ty', `${y}px`);
-                this.element.style.transform = `translate(${x}px, ${y}px)`;
+                // 모바일 반응형 대응을 위해 퍼센트와 계산식 사용
+                const step = 100 / 4;
+                const gap = 13.3; // 10px 간격 보정치
+                const x = this.c * 100 + (this.c * gap);
+                const y = this.r * 100 + (this.r * gap);
+                
+                this.element.style.setProperty('--tx', `${x}%`);
+                this.element.style.setProperty('--ty', `${y}%`);
+                this.element.style.transform = `translate(${x}%, ${y}%)`;
             }
             merge() {
                 this.val *= 2;
@@ -242,10 +240,9 @@
                 scoreEl.innerText = score;
                 if (score > highScore) {
                     highScore = score;
-                    localStorage.setItem('2048_best_v2', highScore);
+                    localStorage.setItem('2048_mobile_best', highScore);
                     bestEl.innerText = highScore;
                 }
-                // 이동이 끝나는 시점에 맞춰 새 타일 생성 (자연스러움의 핵심)
                 setTimeout(addRandomTile, 150);
                 if (checkGameOver()) document.getElementById('game-over').style.display = 'flex';
             }
@@ -262,12 +259,45 @@
             return true;
         }
 
+        // 키보드 제어
         window.onkeydown = (e) => {
             if (e.key.includes("Arrow")) {
                 e.preventDefault();
                 move(e.key.replace("Arrow", "").toLowerCase());
             }
         };
+
+        // 모바일 스와이프 제어
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+
+            // 최소 30px 이상 움직였을 때만 동작 (터치 실수 방지)
+            if (Math.max(absDx, absDy) > 30) {
+                if (absDx > absDy) {
+                    move(dx > 0 ? 'right' : 'left');
+                } else {
+                    move(dy > 0 ? 'down' : 'up');
+                }
+            }
+        }, { passive: false });
+
+        // 화면 밀림 방지
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
         resetGame();
     </script>
