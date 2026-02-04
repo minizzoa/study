@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>2048 Bright & Clear</title>
+    <title>2048 Rounded Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #fbf9f2; /* 더 밝은 전체 배경 */
-            --grid-bg: #9e8e7e; /* 격자 배경을 조금 더 어둡게 하여 타일 부각 */
-            --tile-bg: #d6cdc4; /* 빈 칸 색상 */
-            --text-dark: #4a453f; /* 짙은 텍스트로 가독성 확보 */
-            --text-light: #ffffff;
-            --transition-speed: 130ms;
-            --radius-main: 15px;
-            --radius-tile: 10px;
+            --bg-color: #fbf8ef;
+            --grid-bg: #bbada0; 
+            --tile-bg: rgba(238, 228, 218, 0.35); 
+            --text-dark: #776e65;
+            --transition-speed: 110ms;
+            
+            /* 라운드 처리 강화 */
+            --radius-main: 10px;    /* 게임판 바깥쪽 모서리 */
+            --radius-tile: 12px;    /* 숫자 카드(타일) 모서리 - 더 둥글게 조정 */
+            
+            /* 수치 고정 */
+            --container-size: 340px;
+            --grid-gap: 12px;
+            --tile-size: 70px;
         }
 
         * { -webkit-tap-highlight-color: transparent; touch-action: none; box-sizing: border-box; }
@@ -25,78 +31,99 @@
             overflow: hidden; height: 100vh; color: var(--text-dark);
         }
 
-        .header { width: 100%; max-width: 360px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .title { font-size: 48px; font-weight: bold; margin: 0; color: #8f7a66; }
+        .header { width: 100%; max-width: var(--container-size); display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .title { font-size: 52px; font-weight: bold; margin: 0; color: #776e65; }
         
         .score-container { display: flex; gap: 8px; }
         .score-box { 
-            background: #8f7a66; padding: 8px 12px; border-radius: 8px; min-width: 75px;
+            background: #bbada0; padding: 8px 12px; border-radius: 8px; min-width: 70px;
             text-align: center; color: white;
         }
-        .score-label { font-size: 12px; font-weight: bold; opacity: 0.9; }
-        .score-value { font-size: 20px; font-weight: bold; }
+        .score-label { font-size: 11px; font-weight: bold; opacity: 0.9; }
+        .score-value { font-size: 18px; font-weight: bold; }
 
-        .controls { width: 100%; max-width: 360px; display: flex; justify-content: flex-end; margin: 15px 0; }
+        .controls { width: 100%; max-width: var(--container-size); display: flex; justify-content: flex-end; margin: 15px 0; }
         .btn { 
-            background: #776e65; color: white; border: none; padding: 12px 24px; 
-            border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Jua'; font-size: 1.1rem;
-            box-shadow: 0 4px 0 #5a534c;
+            background: #8f7a66; color: white; border: none; padding: 10px 25px; 
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Jua'; font-size: 1.1rem;
         }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #5a534c; }
 
+        /* 게임 컨테이너 */
         #game-container {
-            position: relative; width: 92vw; height: 92vw; max-width: 360px; max-height: 360px;
-            background: var(--grid-bg); border-radius: var(--radius-main); padding: 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            position: relative; 
+            width: var(--container-size); 
+            height: var(--container-size);
+            background: var(--grid-bg); 
+            border-radius: var(--radius-main); 
+            padding: var(--grid-gap);
+            user-select: none;
         }
 
-        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; width: 100%; height: 100%; }
-        .grid-cell { background: var(--tile-bg); border-radius: var(--radius-tile); }
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(4, var(--tile-size)); 
+            grid-template-rows: repeat(4, var(--tile-size)); 
+            gap: var(--grid-gap); 
+        }
 
-        .tile-container { position: absolute; z-index: 2; top: 12px; left: 12px; bottom: 12px; right: 12px; pointer-events: none; }
+        .grid-cell { 
+            width: var(--tile-size); 
+            height: var(--tile-size); 
+            background: var(--tile-bg); 
+            border-radius: var(--radius-tile); /* 빈 칸도 둥글게 */
+        }
+
+        .tile-container { 
+            position: absolute; 
+            top: var(--grid-gap); 
+            left: var(--grid-gap); 
+            width: calc(100% - (var(--grid-gap) * 2));
+            height: calc(100% - (var(--grid-gap) * 2));
+        }
         
         .tile {
-            position: absolute; width: calc((100% - 36px) / 4); height: calc((100% - 36px) / 4);
-            border-radius: var(--radius-tile); display: flex; align-items: center; justify-content: center;
+            position: absolute; 
+            width: var(--tile-size); 
+            height: var(--tile-size);
+            border-radius: var(--radius-tile); /* 타일 라운드 적용 */
+            display: flex; align-items: center; justify-content: center;
             font-size: 32px; font-weight: bold;
-            transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform var(--transition-speed) ease-in-out;
             will-change: transform;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10;
         }
 
-        /* 명확하고 밝은 컬러 테마 */
-        .t-2 { background: #ffffff; color: #444; } /* 순백색 */
-        .t-4 { background: #fff9eb; color: #444; } /* 연한 노랑 */
-        .t-8 { background: #ffcc80; color: #fff; } /* 오렌지 */
-        .t-16 { background: #ffab91; color: #fff; } /* 다홍 */
-        .t-32 { background: #f48fb1; color: #fff; } /* 핑크 */
-        .t-64 { background: #ce93d8; color: #fff; } /* 보라 */
-        .t-128 { background: #81d4fa; color: #fff; font-size: 28px; } /* 하늘 */
-        .t-256 { background: #80cbc4; color: #fff; font-size: 28px; } /* 민트 */
-        .t-512 { background: #a5d6a7; color: #fff; font-size: 28px; } /* 연두 */
-        .t-1024 { background: #fff59d; color: #8f7a66; font-size: 24px; } /* 밝은 노랑 */
-        .t-2048 { background: #fdd835; color: #fff; font-size: 24px; box-shadow: 0 0 15px #fdd835; }
+        /* --- 색상 팔레트 --- */
+        .t-2 { background: #eee4da; color: #776e65; }
+        .t-4 { background: #ede0c8; color: #776e65; }
+        .t-8 { background: #f2b179; color: #fff; }
+        .t-16 { background: #f59563; color: #fff; }
+        .t-32 { background: #f67c5f; color: #fff; }
+        .t-64 { background: #f65e3b; color: #fff; }
+        .t-128 { background: #edcf72; color: #fff; font-size: 28px; box-shadow: 0 0 5px rgba(237, 207, 114, 0.5); }
+        .t-256 { background: #edcc61; color: #fff; font-size: 28px; }
+        .t-512 { background: #edc850; color: #fff; font-size: 28px; }
+        .t-1024 { background: #edc53f; color: #fff; font-size: 22px; }
+        .t-2048 { background: #edc22e; color: #fff; font-size: 22px; }
 
-        .tile-new { animation: soft-appear 200ms ease-out forwards; }
-        @keyframes soft-appear {
-            0% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.5); }
+        .tile-new { animation: appear 200ms ease-out; }
+        @keyframes appear {
+            0% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
             100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
         }
 
-        .tile-merged { animation: pop 180ms ease-in-out; z-index: 10; }
+        .tile-merged { animation: pop 180ms ease-in-out; z-index: 20; }
         @keyframes pop {
             0% { transform: translate(var(--tx), var(--ty)) scale(1); }
-            50% { transform: translate(var(--tx), var(--ty)) scale(1.18); }
+            50% { transform: translate(var(--tx), var(--ty)) scale(1.1); }
             100% { transform: translate(var(--tx), var(--ty)) scale(1); }
         }
 
-        /* 게임 종료 화면 스타일 상향 */
         #game-over {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); display: none;
+            background: rgba(238, 228, 218, 0.85); display: none;
             flex-direction: column; align-items: center; justify-content: center;
             border-radius: var(--radius-main); z-index: 100;
-            color: white; text-align: center; backdrop-filter: blur(4px);
         }
     </style>
 </head>
@@ -129,8 +156,7 @@
         </div>
         <div id="tile-container" class="tile-container"></div>
         <div id="game-over">
-            <h2 style="font-size: 48px; margin-bottom: 10px;">Oops!</h2>
-            <p style="font-size: 20px; margin-bottom: 25px;">No more moves left.</p>
+            <h2 style="font-size: 32px; margin-bottom: 20px;">Game Over!</h2>
             <button class="btn" onclick="resetGame()">Try Again</button>
         </div>
     </div>
@@ -138,7 +164,7 @@
     <script>
         let board = Array(4).fill().map(() => Array(4).fill(null));
         let score = 0;
-        let highScore = localStorage.getItem('2048_bright_best') || 0;
+        let highScore = localStorage.getItem('2048_rounded_best') || 0;
 
         const tileContainer = document.getElementById('tile-container');
         const scoreEl = document.getElementById('score');
@@ -158,13 +184,14 @@
                 this.element.className = `tile t-${this.val} ${isNew ? 'tile-new' : ''}`;
             }
             updateView() {
-                const step = 100;
-                const gap = 13.5; 
-                const x = this.c * step + (this.c * gap);
-                const y = this.r * step + (this.r * gap);
-                this.element.style.setProperty('--tx', `${x}%`);
-                this.element.style.setProperty('--ty', `${y}%`);
-                this.element.style.transform = `translate(${x}%, ${y}%)`;
+                const tileSize = 70; 
+                const gap = 12;
+                const tx = this.c * (tileSize + gap);
+                const ty = this.r * (tileSize + gap);
+                
+                this.element.style.setProperty('--tx', `${tx}px`);
+                this.element.style.setProperty('--ty', `${ty}px`);
+                this.element.style.transform = `translate(${tx}px, ${ty}px)`;
             }
             merge() {
                 this.val *= 2;
@@ -248,35 +275,26 @@
                 scoreEl.innerText = score;
                 if (score > highScore) {
                     highScore = score;
-                    localStorage.setItem('2048_bright_best', highScore);
+                    localStorage.setItem('2048_rounded_best', highScore);
                     bestEl.innerText = highScore;
                 }
                 setTimeout(() => {
                     addRandomTile();
-                    // 타일 생성 후 게임 오버 판정
-                    if (checkGameOver()) {
-                        document.getElementById('game-over').style.display = 'flex';
-                    }
-                }, 150);
+                    if (checkGameOver()) document.getElementById('game-over').style.display = 'flex';
+                }, 120);
             }
         }
 
-        // 게임 오버 판정 로직: 빈 칸이 없고, 인접한 타일끼리 합칠 수 없을 때
         function checkGameOver() {
-            // 1. 빈 칸이 있는지 확인
             if (board.flat().includes(null)) return false;
-
-            // 2. 가로/세로로 합칠 수 있는 타일이 있는지 확인
             for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
                     const current = board[r][c].val;
-                    // 오른쪽 확인
                     if (c < 3 && current === board[r][c+1].val) return false;
-                    // 아래쪽 확인
                     if (r < 3 && current === board[r+1][c].val) return false;
                 }
             }
-            return true; // 아무것도 할 수 없으면 게임 종료
+            return true;
         }
 
         window.onkeydown = (e) => {
@@ -286,7 +304,6 @@
             }
         };
 
-        // 모바일 스와이프
         let sX, sY;
         document.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; }, {passive: false});
         document.addEventListener('touchend', e => {
