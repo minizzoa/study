@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🧱 2048 타일 게임</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fdf6e3;
+            --grid-bg: #c7b8a1;
+            --text-color: #776e65;
+            --point-color: #8f7a66;
+        }
+
+        body { 
+            background: var(--bg-color); 
+            display: flex; flex-direction: column; align-items: center; 
+            margin: 0; padding: 5px; font-family: 'Jua', sans-serif;
+            overflow: hidden; touch-action: none;
+        }
+
+        h1 { color: #5d544b; margin: 5px 0; font-size: 2.2rem; text-shadow: 2px 2px #eee; }
+
+        /* 상단 레이아웃 수정 */
+        .top-bar {
+            width: 90vw; max-width: 400px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* 왼쪽: 사운드 컨트롤 */
+        .sound-control {
+            background: white; border: 3px solid #bbaa9f; border-radius: 15px;
+            padding: 8px 12px; cursor: pointer; display: flex; align-items: center;
+            gap: 5px; box-shadow: 0 4px #bbaa9f; transition: 0.1s;
+        }
+        .sound-control:active { transform: translateY(2px); box-shadow: 0 2px #bbaa9f; }
+        .sound-icon { font-size: 1.2rem; }
+
+        /* 오른쪽: 점수판 (가로로 더 넓게) */
+        .score-box { 
+            background: #bbaa9f; color: white; padding: 5px 30px; 
+            border-radius: 15px; text-align: center; box-shadow: 0 4px #8d7d73;
+            min-width: 120px;
+        }
+        #score { font-size: 1.8rem; font-weight: bold; }
+
+        /* 게임판 */
+        #grid-container {
+            position: relative; width: 90vw; height: 90vw; max-width: 400px; max-height: 400px;
+            background: var(--grid-bg); padding: 12px; border-radius: 15px; 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1); box-sizing: border-box;
+        }
+
+        #grid { 
+            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); 
+            gap: 10px; width: 100%; height: 100%; 
+        }
+
+        .cell { 
+            background: rgba(238, 228, 218, 0.5); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 2rem; font-weight: bold; color: var(--text-color);
+            transition: all 0.1s;
+        }
+
+        .n-2 { background: #eee4da; box-shadow: 0 4px #d2c5b7; }
+        .n-4 { background: #ede0c8; box-shadow: 0 4px #d0c2a9; }
+        .n-8 { background: #f2b179; color: white; box-shadow: 0 4px #d69a66; }
+        .n-16 { background: #f59563; color: white; box-shadow: 0 4px #d67f53; }
+        .n-32 { background: #f67c5f; color: white; box-shadow: 0 4px #d4654b; }
+        .n-64 { background: #f65e3b; color: white; box-shadow: 0 4px #d14d2f; }
+        .n-128 { background: #edcf72; color: white; font-size: 1.8rem; box-shadow: 0 4px #c9af5e; }
+        .n-256 { background: #edcc61; color: white; font-size: 1.8rem; box-shadow: 0 4px #c9ad4e; }
+
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9); display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 15px; z-index: 20;
+        }
+
+        #restart-btn {
+            background: var(--point-color); color: white; border: none; padding: 15px 40px;
+            font-size: 1.8rem; border-radius: 15px; cursor: pointer; font-family: 'Jua';
+            box-shadow: 0 5px #5d544b;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>2048 타일 게임</h1>
+    
+    <div class="top-bar">
+        <div class="sound-control" id="sound-toggle">
+            <span class="sound-icon" id="sound-icon">🔊</span>
+            <span style="color: #776e65;">소리 켬</span>
+        </div>
+
+        <div class="score-box">
+            <div style="font-size: 0.8rem; opacity: 0.9;">SCORE</div>
+            <div id="score">0</div>
+        </div>
+    </div>
+
+    <div id="grid-container">
+        <div id="grid"></div>
+        <div id="overlay">
+            <p style="font-size: 2.5rem; color: #776e65; margin-bottom: 20px;">우와! 끝났어요!</p>
+            <button id="restart-btn">한 번 더!</button>
+        </div>
+    </div>
+
+    <audio id="popSound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        let board = Array(4).fill().map(() => Array(4).fill(0));
+        let score = 0;
+        let soundEnabled = true;
+
+        const grid = document.getElementById('grid');
+        const scoreDisplay = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+        const popSound = document.getElementById('popSound');
+        const soundToggle = document.getElementById('sound-toggle');
+        const soundIcon = document.getElementById('sound-icon');
+        const soundText = soundToggle.querySelector('span:last-child');
+
+        // 사운드 토글 기능
+        soundToggle.onclick = () => {
+            soundEnabled = !soundEnabled;
+            soundIcon.innerText = soundEnabled ? "🔊" : "🔇";
+            soundText.innerText = soundEnabled ? "소리 켬" : "소리 끔";
+            // 브라우저 오디오 제한 해제를 위해 무음 재생 시도
+            if(soundEnabled) popSound.play().catch(()=>{});
+        };
+
+        function init() {
+            board = Array(4).fill().map(() => Array(4).fill(0));
+            score = 0;
+            overlay.style.display = 'none';
+            for(let i=0; i<4; i++) generate(); // 4개로 시작
+            updateBoard();
+        }
+
+        function updateBoard() {
+            grid.innerHTML = '';
+            board.flat().forEach(val => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                if (val > 0) {
+                    cell.innerText = val;
+                    cell.classList.add('n-' + val);
+                }
+                grid.appendChild(cell);
+            });
+            scoreDisplay.innerText = score;
+        }
+
+        function generate() {
+            const empty = [];
+            board.forEach((r, ri) => r.forEach((c, ci) => { if(c===0) empty.push({ri, ci}) }));
+            if (empty.length > 0) {
+                const {ri, ci} = empty[Math.floor(Math.random() * empty.length)];
+                board[ri][ci] = Math.random() > 0.1 ? 2 : 4;
+            }
+        }
+
+        function slide(row) {
+            let filtered = row.filter(x => x > 0);
+            let mergedInThisRow = false;
+            for (let i = 0; i < filtered.length - 1; i++) {
+                if (filtered[i] === filtered[i+1]) {
+                    filtered[i] *= 2;
+                    score += filtered[i];
+                    filtered[i+1] = 0;
+                    mergedInThisRow = true;
+                }
+            }
+            if(mergedInThisRow && soundEnabled) {
+                popSound.currentTime = 0;
+                popSound.play().catch(()=>{});
+            }
+            filtered = filtered.filter(x => x > 0);
+            while (filtered.length < 4) filtered.push(0);
+            return filtered;
+        }
+
+        function move(dir) {
+            const prev = JSON.stringify(board);
+            if (dir === 'left') board = board.map(r => slide(r));
+            if (dir === 'right') board = board.map(r => slide([...r].reverse()).reverse());
+            if (dir === 'up') {
+                for(let c=0; c<4; c++) {
+                    let col = slide([board[0][c], board[1][c], board[2][c], board[3][c]]);
+                    for(let r=0; r<4; r++) board[r][c] = col[r];
+                }
+            }
+            if (dir === 'down') {
+                for(let c=0; c<4; c++) {
+                    let col = slide([board[0][c], board[1][c], board[2][c], board[3][c]].reverse()).reverse();
+                    for(let r=0; r<4; r++) board[r][c] = col[r];
+                }
+            }
+
+            if (prev !== JSON.stringify(board)) {
+                generate();
+                updateBoard();
+                if(checkGameOver()) overlay.style.display = 'flex';
+            }
+        }
+
+        function checkGameOver() {
+            if (board.flat().includes(0)) return false;
+            for(let r=0; r<4; r++) {
+                for(let c=0; c<4; c++) {
+                    if (c<3 && board[r][c] === board[r][c+1]) return false;
+                    if (r<3 && board[r][c] === board[r+1][c]) return false;
+                }
+            }
+            return true;
+        }
+
+        window.onkeydown = (e) => {
+            if (e.key === 'ArrowUp') move('up');
+            if (e.key === 'ArrowDown') move('down');
+            if (e.key === 'ArrowLeft') move('left');
+            if (e.key === 'ArrowRight') move('right');
+        };
+
+        // 스와이프 기능
+        let startX, startY;
+        document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; });
+        document.addEventListener('touchend', e => {
+            if (!startX || !startY) return;
+            const diffX = e.changedTouches[0].clientX - startX;
+            const diffY = e.changedTouches[0].clientY - startY;
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > 30) move(diffX > 0 ? 'right' : 'left');
+            } else {
+                if (Math.abs(diffY) > 30) move(diffY > 0 ? 'down' : 'up');
+            }
+            startX = startY = null;
+        });
+
+        document.getElementById('restart-btn').onclick = init;
+        init();
+    </script>
+</body>
+</html>
