@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>🐤날아라 삐약이! ✨</title>
+    <title>🐤 날아라 삐약이! ✨</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -19,24 +19,28 @@
         h1 { margin: 10px 0 5px 0; color: #ff8b94; font-size: 1.8rem; }
 
         .status-bar {
-            width: 95vw; max-width: 380px; display: flex; justify-content: space-between; 
-            align-items: center; margin-bottom: 10px; background: white; 
+            width: 95vw; max-width: 380px; display: flex; flex-direction: column; 
+            gap: 5px; margin-bottom: 10px; background: white; 
             padding: 8px 12px; border-radius: 12px; box-sizing: border-box; box-shadow: 0 4px #eee;
         }
+        .info-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .score-info { font-size: 1.1rem; color: #5d544b; display: flex; align-items: center; gap: 8px; }
+        .high-score-info { font-size: 0.9rem; color: #ff7b25; }
         #level-tag { font-size: 0.8rem; background: #ffeb3b; padding: 2px 8px; border-radius: 10px; }
 
         .controls { display: flex; gap: 5px; }
+        
+        /* 버튼 세로 길이 축소 (padding 수정) */
         button {
-            padding: 8px 10px; border: none; border-radius: 8px; font-family: 'Jua';
-            font-size: 0.9rem; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;
+            padding: 4px 10px; border: none; border-radius: 6px; font-family: 'Jua';
+            font-size: 0.85rem; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center;
         }
         .btn-pause { background: #feb236; }
         .btn-restart { background: #ff7b25; }
-        .btn-mute { background: #a8a8a8; width: 40px; font-size: 1.1rem; }
+        .btn-mute { background: #a8a8a8; width: 35px; font-size: 1rem; }
         .btn-mute.active { background: #ff8b94; }
 
-        #game-container { position: relative; width: 90vw; height: 65vh; max-width: 360px; max-height: 500px; }
+        #game-container { position: relative; width: 90vw; height: 60vh; max-width: 360px; max-height: 480px; }
         canvas { 
             background: var(--sky); border-radius: 15px; width: 100%; height: 100%;
             display: block; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: background 1.5s;
@@ -46,10 +50,10 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.85); display: none;
             flex-direction: column; align-items: center; justify-content: center;
-            border-radius: 15px; z-index: 10;
+            border-radius: 15px; z-index: 10; text-align: center;
         }
         
-        .guide-text { margin-top: 10px; color: #888; font-size: 0.9rem; text-align: center; }
+        .guide-text { margin-top: 10px; color: #888; font-size: 0.85rem; text-align: center; }
     </style>
 </head>
 <body>
@@ -57,29 +61,36 @@
     <h1>🐤 날아라 삐약이! 🚀</h1>
 
     <div class="status-bar">
-        <div class="score-info">
-            <span>점수: <b id="score">0</b></span>
-            <span id="level-tag">초보 삐약이</span>
+        <div class="info-row">
+            <div class="score-info">
+                <span>점수: <b id="score">0</b></span>
+                <span id="level-tag">초보 삐약이</span>
+            </div>
+            <div class="high-score-info">🏆 최고: <span id="best">0</span></div>
         </div>
-        <div class="controls">
-            <button class="btn-mute" id="muteBtn" onclick="toggleMute(event)">🔊</button>
-            <button class="btn-pause" onclick="togglePause(event)" id="pauseBtn">중지</button>
-            <button class="btn-restart" onclick="resetGame(event)">다시 시작</button>
+        <div class="info-row" style="margin-top: 3px;">
+            <div style="color: #aaa; font-size: 0.75rem;">열심히 날아봐요!</div>
+            <div class="controls">
+                <button class="btn-mute" id="muteBtn" onclick="toggleMute(event)">🔊</button>
+                <button class="btn-pause" onclick="togglePause(event)" id="pauseBtn">중지</button>
+                <button class="btn-restart" onclick="resetGame(event)">다시 시작</button>
+            </div>
         </div>
     </div>
 
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="overlay">
-            <h2 id="end-title" style="font-size: 2rem; color: #ff8b94; margin: 0;">삐약... 털썩!</h2>
-            <p id="finalScore" style="font-size: 1.2rem; margin: 10px 0;"></p>
-            <button class="btn-restart" onclick="resetGame(event)" style="padding: 12px 25px; font-size: 1.2rem; background: var(--btn-main); width: auto;">다시 도전!</button>
+            <h2 id="end-title" style="font-size: 1.8rem; color: #ff8b94; margin: 0;">삐약... 털썩!</h2>
+            <p id="finalScore" style="font-size: 1.1rem; margin: 5px 0;"></p>
+            <p id="bestNotice" style="font-size: 0.9rem; color: #ff7b25; margin-bottom: 12px; font-weight: bold;"></p>
+            <button class="btn-restart" onclick="resetGame(event)" style="padding: 8px 20px; font-size: 1.1rem; background: var(--btn-main); width: auto;">다시 도전!</button>
         </div>
     </div>
     
-    <p class="guide-text">화면을 터치해서 삐약이를 높이 띄우세요!<br>(초반에는 기둥 사이가 아주 넓어요 😊)</p>
+    <p class="guide-text">화면을 터치해서 삐약이를 높이 띄우세요!</p>
 
-    <img src="chick_flying.png" id="birdImage" style="display:none;">
+    <img src="chick_flying.png" id="birdImage" style="display:none;" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; window.imageError=true;">
 
     <audio id="jumpSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
     <audio id="scoreSound" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
@@ -92,24 +103,28 @@
         const muteBtn = document.getElementById("muteBtn");
         const overlay = document.getElementById("overlay");
         const levelTag = document.getElementById("level-tag");
-        const birdImage = document.getElementById("birdImage"); // 이미지 요소 가져오기
+        const birdImage = document.getElementById("birdImage");
+        const bestEl = document.getElementById("best");
         
         const CW = 360, CH = 500;
         canvas.width = CW; canvas.height = CH;
 
-        let bird, pipes, score, frames, gameActive, isPaused, isMuted = false;
-        
+        let bird, pipes, score, frames, gameActive = false, isPaused = false, isMuted = false;
+        let highScore = localStorage.getItem("piyakHighScore") || 0;
+        bestEl.innerText = highScore;
+
         let pipeSpeed, pipeGap, spawnInterval;
 
-        // 이미지가 로드될 때까지 기다림
-        birdImage.onload = () => {
-            resetGame();
-        };
-        // 만약 이미지가 바로 로드되지 않는다면 (캐시 등으로) 강제 호출
-        if (birdImage.complete) {
-            resetGame();
+        // 핵심 수정: 이미지 로딩과 상관없이 게임 실행 보장
+        function startGameSafely() {
+            if (!gameActive && frames === undefined) {
+                resetGame();
+            }
         }
 
+        birdImage.onload = startGameSafely;
+        // 1초 뒤에도 게임이 안 뜨면 강제 실행 (이미지 경로 오류 대비)
+        setTimeout(startGameSafely, 1000);
 
         function playSfx(id) {
             if (isMuted) return;
@@ -129,31 +144,29 @@
             constructor() {
                 this.x = 60; this.y = CH / 2; this.v = 0;
                 this.gravity = 0.22; this.jumpPower = -4.8; 
-                this.width = 40; // 이미지 크기에 맞춰 조절
-                this.height = 40; // 이미지 크기에 맞춰 조절
+                this.width = 36; this.height = 36;
             }
             draw() {
-                // 이미지가 로드되었을 때만 그리기
-                if (birdImage.complete && birdImage.naturalWidth !== 0) {
-                    ctx.save();
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.v * 0.1)));
-                    // 이미지 중심을 기준으로 그리기 위해 위치 조정
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.v * 0.1)));
+                
+                // 이미지 로드 성공 여부 확인
+                if (birdImage.complete && birdImage.naturalWidth > 1) {
                     ctx.drawImage(birdImage, -this.width / 2, -this.height / 2, this.width, this.height);
-                    ctx.restore();
                 } else {
-                    // 이미지가 로드되지 않았다면 기존처럼 원으로 그림 (임시)
-                    ctx.beginPath(); ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
+                    // 이미지 없을 때 노란 동그라미로 대체
+                    ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2);
                     ctx.fillStyle = "#FFEB3B"; ctx.fill();
                     ctx.strokeStyle = "#FBC02D"; ctx.lineWidth = 3; ctx.stroke();
                 }
+                ctx.restore();
             }
             update() {
                 if (isPaused) return;
                 this.v += this.gravity;
                 this.y += this.v;
-                // 바닥 또는 천장 충돌 시 게임 오버
-                if (this.y + this.height / 2 > CH || this.y - this.height / 2 < 0) endGame();
+                if (this.y + 15 > CH || this.y - 15 < 0) endGame();
             }
             jump() {
                 if (isPaused || !gameActive) return;
@@ -164,19 +177,15 @@
 
         function updateDifficulty() {
             if (score < 5) {
-                pipeSpeed = 1.8; 
-                pipeGap = 180; 
-                spawnInterval = 120;
+                pipeSpeed = 1.8; pipeGap = 180; spawnInterval = 120;
                 levelTag.innerText = "초보 삐약이";
                 levelTag.style.background = "#fff";
-                levelTag.style.color = "#5d544b";
             } else if (score < 15) {
                 pipeSpeed = 2.2 + (score - 5) * 0.1;
                 pipeGap = 180 - (score - 5) * 3;
                 spawnInterval = 110 - (score - 5) * 2;
                 levelTag.innerText = "중수 삐약이";
                 levelTag.style.background = "#ffeb3b";
-                levelTag.style.color = "#5d544b";
             } else {
                 pipeSpeed = Math.min(3.2 + (score - 15) * 0.05, 5.0);
                 pipeGap = Math.max(150 - (score - 15) * 2, 110);
@@ -185,12 +194,9 @@
                 levelTag.style.background = "#ff8b94";
                 levelTag.style.color = "white";
             }
-            
             if (score >= 5) {
                 const hue = Math.max(200 - score * 2, 150);
                 canvas.style.background = `hsl(${hue}, 70%, 75%)`;
-            } else {
-                 canvas.style.background = "var(--sky)"; // 초기 배경색 유지
             }
         }
 
@@ -205,7 +211,6 @@
             if (!gameActive) return;
             isPaused = !isPaused;
             pauseBtn.innerText = isPaused ? "계속" : "중지";
-            pauseBtn.style.background = isPaused ? "#4caf50" : "#feb236";
             if (!isPaused) requestAnimationFrame(loop);
         }
 
@@ -216,21 +221,30 @@
             gameActive = true; isPaused = false;
             canvas.style.background = "var(--sky)";
             overlay.style.display = "none";
-            updateDifficulty(); // 난이도 초기화
+            document.getElementById("bestNotice").innerText = "";
             document.getElementById("score").innerText = "0";
+            updateDifficulty();
             requestAnimationFrame(loop);
         }
 
         function endGame() {
+            if (!gameActive) return;
             gameActive = false;
             playSfx('hitSound');
+            let notice = "";
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem("piyakHighScore", highScore);
+                bestEl.innerText = highScore;
+                notice = "🎉 신기록 달성! 🎉";
+            }
             document.getElementById("finalScore").innerText = `${score}점 달성!`;
+            document.getElementById("bestNotice").innerText = notice;
             overlay.style.display = "flex";
         }
 
         function loop() {
             if (!gameActive || isPaused) return;
-
             ctx.clearRect(0, 0, CW, CH);
             updateDifficulty();
 
@@ -241,19 +255,15 @@
                 ctx.fillStyle = "#8BC34A";
                 ctx.fillRect(p.x, 0, 50, p.top);
                 ctx.fillRect(p.x, p.top + p.gap, 50, CH);
-                
                 ctx.strokeStyle = "#558B2F"; ctx.lineWidth = 2;
                 ctx.strokeRect(p.x, 0, 50, p.top);
                 ctx.strokeRect(p.x, p.top + p.gap, 50, CH);
                 
-                // [충돌 감지 로직 수정]: 이미지 크기 반영
-                if (bird.x + bird.width / 2 > p.x && bird.x - bird.width / 2 < p.x + 50) {
-                    if (bird.y - bird.height / 2 < p.top || bird.y + bird.height / 2 > p.top + p.gap) endGame();
+                if (bird.x + 15 > p.x && bird.x - 15 < p.x + 50) {
+                    if (bird.y - 15 < p.top || bird.y + 15 > p.top + p.gap) endGame();
                 }
-
-                if (p.x + 50 < bird.x - bird.width/2 && !p.passed) { // 점수 획득 조건도 이미지 기준
-                    score++;
-                    p.passed = true;
+                if (p.x + 50 < bird.x && !p.passed) {
+                    score++; p.passed = true;
                     document.getElementById("score").innerText = score;
                     playSfx('scoreSound');
                 }
