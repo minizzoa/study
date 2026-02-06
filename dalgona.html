@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>달고나 타임 어택 - 사운드 & 폭죽 에디션</title>
+    <title>달고나 타임 어택 - 최종 에디션</title>
     <style>
         :root { 
             --bg: #fdf5e6; --dalgona: #d2a679; --accent: #d32f2f; 
@@ -42,18 +42,17 @@
 
         #finger-img { position: absolute; width: 32px; height: 50px; pointer-events: none; z-index: 50; display: none; }
         
-        /* 폭죽 캔버스 - 꽉 차게 */
-        #confetti-canvas { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; z-index: 35; border-radius: 50%; 
-        }
-
+        /* 오버레이 공통 */
         #pause-overlay, #clear-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             border-radius: 50%; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 60;
+            overflow: hidden;
         }
         #pause-overlay { background: rgba(0, 0, 0, 0.6); color: white; }
-        #clear-overlay { background: rgba(0, 0, 0, 0.9); color: white; }
+        #clear-overlay { background: rgba(0, 0, 0, 0.92); color: white; }
+
+        /* 폭죽 캔버스 - 클리어 오버레이 내부에 위치 */
+        #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
         #record-board { 
             width: 90%; max-width: 360px; background: rgba(93, 64, 55, 0.12); 
@@ -61,7 +60,7 @@
         }
         #best-total { font-size: 24px; font-weight: 900; color: var(--accent); display: block; margin-top: 5px; }
 
-        button.main-btn { padding: 12px 35px; background: #4caf50; color: white; border: none; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        button.main-btn { position: relative; z-index: 70; padding: 12px 35px; background: #4caf50; color: white; border: none; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -81,7 +80,6 @@
 
     <div id="game-container">
         <div id="feedback-text"></div>
-        <canvas id="confetti-canvas"></canvas>
         <img id="finger-img" src="finger.png" alt="finger">
         
         <div id="pause-overlay">
@@ -90,10 +88,13 @@
         </div>
 
         <div id="clear-overlay">
-            <h2 style="color: gold; margin:0; font-size: 24px;">MISSION COMPLETE!</h2>
-            <h1 id="finalTime" style="font-size: 48px; margin: 10px 0;">0.00s</h1>
-            <p id="newRecordMsg" style="color: #ffeb3b; font-weight: bold; font-size: 18px; margin-bottom: 15px;"></p>
-            <button class="main-btn" onclick="location.reload()">TRY AGAIN</button>
+            <canvas id="confetti-canvas"></canvas>
+            <div style="position: relative; z-index: 70;">
+                <h2 style="color: gold; margin:0; font-size: 24px;">MISSION COMPLETE!</h2>
+                <h1 id="finalTime" style="font-size: 48px; margin: 10px 0;">0.00s</h1>
+                <p id="newRecordMsg" style="color: #ffeb3b; font-weight: bold; font-size: 18px; margin-bottom: 15px;"></p>
+                <button class="main-btn" onclick="location.reload()">TRY AGAIN</button>
+            </div>
         </div>
 
         <canvas id="gameCanvas" width="400" height="400"></canvas>
@@ -105,7 +106,7 @@
     </div>
 
 <script>
-// 오디오 리소스 설정
+// 사운드 설정
 const sndCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
 const sndWrong = new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3');
 const sndTick = new Audio('https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3'); 
@@ -140,21 +141,16 @@ function toggleMute() {
 function togglePause() {
     if (!gameActive) return;
     isPaused = !isPaused;
-    const overlay = document.getElementById('pause-overlay');
+    document.getElementById('pause-overlay').style.display = isPaused ? 'flex' : 'none';
     document.getElementById('pause-btn').innerText = isPaused ? "▶" : "⏸";
-    if (isPaused) {
-        overlay.style.display = 'flex';
-        pauseStartTime = Date.now();
-    } else {
-        overlay.style.display = 'none';
-        if (gameStartTime) pausedTime += (Date.now() - pauseStartTime);
-    }
+    if (isPaused) { pauseStartTime = Date.now(); }
+    else { if (gameStartTime) pausedTime += (Date.now() - pauseStartTime); }
 }
 
 function playSound(snd) {
     if (isMuted) return;
     snd.currentTime = 0;
-    snd.play().catch(e => console.log("Audio play failed"));
+    snd.play().catch(() => {});
 }
 
 function createShape() {
@@ -195,7 +191,6 @@ function handleInput(e) {
     if (!gameStartTime) gameStartTime = Date.now();
     
     feedbackText.style.opacity = 0; 
-
     const x = clientX * sc, y = clientY * sc;
     drawPath.push({x, y}); render();
     points.forEach((p, i) => { if (Math.sqrt((p.x-x)**2+(p.y-y)**2) < 20) visited[i] = true; });
@@ -222,9 +217,7 @@ function complete() {
             document.getElementById('progress').innerText = "0"; 
             render(); 
         }, 700);
-    } else {
-        showClear();
-    }
+    } else { showClear(); }
 }
 
 function handleEnd() {
@@ -243,31 +236,34 @@ function showClear() {
     const totalTime = parseFloat(document.getElementById('timer').innerText);
     document.getElementById('finalTime').innerText = totalTime.toFixed(2) + "s";
     
-    let oldBest = localStorage.getItem('dalgonaBest');
+    let oldBest = localStorage.getItem('dalgonaBestTime');
     if (!oldBest || totalTime < parseFloat(oldBest)) {
-        localStorage.setItem('dalgonaBest', totalTime);
+        localStorage.setItem('dalgonaBestTime', totalTime);
         document.getElementById('newRecordMsg').innerText = "🎊 최고 기록 달성! 🎊";
         document.getElementById('best-total').innerText = totalTime.toFixed(2) + " s";
     }
     
     document.getElementById('clear-overlay').style.display = 'flex';
-    createConfetti();
+    setTimeout(createConfetti, 100); // 오버레이 표시 후 약간의 지연 후 생성
 }
 
-// 역동적인 폭죽 애니메이션 로직
 function createConfetti() {
-    confettiCanvas.width = 400; confettiCanvas.height = 400;
+    confettiCanvas.width = confettiCanvas.offsetWidth;
+    confettiCanvas.height = confettiCanvas.offsetHeight;
     particles = [];
+    const centerX = confettiCanvas.width / 2;
+    const centerY = confettiCanvas.height / 2;
+
     for(let i=0; i<150; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 10 + 5;
+        const speed = Math.random() * 12 + 4;
         particles.push({
-            x: 200, y: 200, 
-            color: `hsl(${Math.random()*360}, 80%, 60%)`,
+            x: centerX, y: centerY, 
+            color: `hsl(${Math.random()*360}, 100%, 60%)`,
             v: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
-            r: Math.random()*4 + 2,
-            friction: 0.98,
-            gravity: 0.2
+            r: Math.random() * 5 + 2,
+            friction: 0.97,
+            gravity: 0.25
         });
     }
     animateConfetti();
@@ -275,13 +271,11 @@ function createConfetti() {
 
 function animateConfetti() {
     if (gameActive) return;
-    confCtx.clearRect(0,0,400,400);
+    confCtx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
     particles.forEach(p => {
-        p.v.x *= p.friction;
-        p.v.y *= p.friction;
+        p.v.x *= p.friction; p.v.y *= p.friction;
         p.v.y += p.gravity;
         p.x += p.v.x; p.y += p.v.y;
-        
         confCtx.fillStyle = p.color;
         confCtx.beginPath(); confCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); confCtx.fill();
     });
@@ -310,15 +304,11 @@ window.addEventListener('touchend', handleEnd);
 setInterval(() => { 
     if (gameActive && gameStartTime && !isPaused) {
         let now = Date.now();
-        const currentTime = ((now - gameStartTime - pausedTime) / 1000).toFixed(2);
-        document.getElementById('timer').innerText = currentTime;
-        
-        // 1초마다 Tick 사운드 (선택 사항)
-        // if (Math.floor(currentTime) > Math.floor(currentTime - 0.03)) playSound(sndTick);
+        document.getElementById('timer').innerText = ((now - gameStartTime - pausedTime) / 1000).toFixed(2);
     }
 }, 30);
 
-const savedBest = localStorage.getItem('dalgonaBest');
+const savedBest = localStorage.getItem('dalgonaBestTime');
 if (savedBest) document.getElementById('best-total').innerText = parseFloat(savedBest).toFixed(2) + " s";
 
 createShape(); render();
