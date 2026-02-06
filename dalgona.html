@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>달고나 타임 어택</title>
+    <style>
+        :root { 
+            --bg: #fdf5e6; --dalgona: #d2a679; --accent: #d32f2f; 
+            --glass: rgba(255, 255, 255, 0.85);
+        }
+        body { 
+            text-align: center; background-color: var(--bg); font-family: 'Pretendard', sans-serif; 
+            margin: 0; padding: 5px; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden;
+        }
+        
+        h1 { font-size: 20px; color: #5d4037; margin: 5px 0; font-weight: 800; }
+        
+        /* 컨트롤 바 (사운드 & 일시중지) */
+        #control-bar { width: 95%; max-width: 400px; display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 5px; }
+        .icon-btn {
+            background: var(--glass); border: 1px solid #d2a679; border-radius: 50%; 
+            width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 18px;
+        }
+
+        #header { width: 95%; max-width: 400px; display: flex; justify-content: space-between; gap: 5px; margin-bottom: 5px; }
+        .stat-box { background: var(--glass); padding: 5px; border-radius: 10px; flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .label { font-size: 9px; color: #8d6e63; display: block; }
+        .value { font-size: 14px; font-weight: 800; color: #3e2723; }
+
+        #spacer { height: 10px; }
+
+        #game-container { position: relative; touch-action: none; margin-bottom: 5px; }
+        canvas#gameCanvas { 
+            background: var(--dalgona); border-radius: 50%; box-shadow: 0 6px 15px rgba(0,0,0,0.2); 
+            border: 6px solid #c49668; cursor: none; width: 88vw; height: 88vw; max-width: 360px; max-height: 360px;
+        }
+
+        #finger-img { position: absolute; width: 32px; height: 50px; pointer-events: none; z-index: 10; display: none; }
+
+        /* ⏸ 일시중지 오버레이 */
+        #pause-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); border-radius: 50%;
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 25;
+        }
+        #pause-overlay div { color: white; font-size: 24px; font-weight: 900; margin-bottom: 15px; }
+
+        #clear-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.88); border-radius: 50%;
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; color: white;
+            overflow: hidden;
+        }
+        #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #clear-content { z-index: 21; pointer-events: auto; }
+
+        #record-board { 
+            width: 90%; max-width: 360px; background: rgba(93, 64, 55, 0.08); 
+            border-radius: 12px; padding: 8px 15px; margin-top: 5px; border: 1px solid rgba(210, 166, 121, 0.3);
+        }
+        #best-total { font-size: 20px; font-weight: 900; color: var(--accent); display: block; }
+
+        button.main-btn { padding: 10px 25px; background: #4caf50; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>✨ 달고나 타임 어택 ✨</h1>
+
+    <div id="control-bar">
+        <button id="pause-btn" class="icon-btn" onclick="togglePause()">⏸</button>
+        <button id="mute-btn" class="icon-btn" onclick="toggleMute()">🔊</button>
+    </div>
+
+    <div id="header">
+        <div class="stat-box"><span class="label">STAGE</span><span class="value" id="stageName">1 / 5</span></div>
+        <div class="stat-box"><span class="label">PROGRESS</span><span class="value" id="progress">0</span>%</div>
+        <div class="stat-box"><span class="label">TOTAL</span><span class="value" id="timer">0.00</span>s</div>
+    </div>
+
+    <div id="spacer"></div>
+
+    <div id="game-container">
+        <img id="finger-img" src="finger.png" alt="finger">
+        
+        <div id="pause-overlay">
+            <div>PAUSED</div>
+            <button class="main-btn" onclick="togglePause()">RESUME</button>
+        </div>
+
+        <div id="clear-overlay">
+            <canvas id="confetti-canvas"></canvas>
+            <div id="clear-content">
+                <h2 style="color: gold; margin:0;">MISSION COMPLETE!</h2>
+                <h1 id="finalTime">0.00s</h1>
+                <p id="newRecordMsg" style="color: #ffeb3b; font-weight: bold; margin-bottom: 15px;"></p>
+                <button class="main-btn" onclick="location.reload()">REPLAY</button>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <div id="record-board">
+        <span style="font-size: 13px; font-weight: bold; color: #5d4037;">🏆 BEST RECORD</span>
+        <span id="best-total">--.-- s</span>
+    </div>
+
+<script>
+let isMuted = false;
+let isPaused = false;
+let gameActive = true;
+let gameStartTime = null;
+let pausedTime = 0; // 일시중지된 총 시간 누적
+let pauseStartTime = 0;
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🔊";
+}
+
+function togglePause() {
+    if (!gameActive) return;
+    isPaused = !isPaused;
+    const overlay = document.getElementById('pause-overlay');
+    const btn = document.getElementById('pause-btn');
+
+    if (isPaused) {
+        overlay.style.display = 'flex';
+        btn.innerText = "▶";
+        pauseStartTime = Date.now();
+    } else {
+        overlay.style.display = 'none';
+        btn.innerText = "⏸";
+        if (gameStartTime) {
+            pausedTime += (Date.now() - pauseStartTime);
+        }
+    }
+}
+
+function playSound(type) {
+    if (isMuted || isPaused) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    if (type === 'success') {
+        osc.frequency.setValueAtTime(523, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime+0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime+0.2);
+    } else if (type === 'fail') {
+        osc.type='square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime+0.2);
+    } else if (type === 'clear') {
+        [523, 659, 783, 1046].forEach((f, i) => {
+            const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(f, audioCtx.currentTime + i * 0.1);
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime + i * 0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.1 + 0.6);
+            o.start(audioCtx.currentTime + i * 0.1); o.stop(audioCtx.currentTime + i * 0.1 + 0.6);
+        });
+    }
+}
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const fingerImg = document.getElementById('finger-img');
+let points = [], visited = [], drawPath = [], isDrawing = false;
+let currentStageCount = 1; const maxStages = 5;
+
+const shapes = [
+    { name: "세모", type: "poly", sides: 3, r: 130 },
+    { name: "네모", type: "poly", sides: 4, r: 130 },
+    { name: "별", type: "star", rOut: 140, rIn: 65 },
+    { name: "하트", type: "heart", r: 9 },
+    { name: "반원", type: "halfCircle", r: 130 }
+];
+
+function loadBestRecord() {
+    const savedBest = localStorage.getItem('dalgonaTotalBest');
+    if (savedBest && savedBest !== "null") document.getElementById('best-total').innerText = parseFloat(savedBest).toFixed(2) + " s";
+}
+
+function createShape() {
+    points = []; drawPath = [];
+    const cx = 200, cy = 200;
+    const s = shapes[Math.floor(Math.random() * shapes.length)];
+    document.getElementById('stageName').innerText = `${currentStageCount} / ${maxStages} (${s.name})`;
+    const addP = (x, y) => {
+        if (points.length > 0) {
+            let last = points[points.length-1];
+            let d = Math.sqrt((x-last.x)**2 + (y-last.y)**2);
+            for(let i=1; i<d; i+=3) points.push({x: last.x + (x-last.x)*(i/d), y: last.y + (y-last.y)*(i/d)});
+        }
+        points.push({x, y});
+    };
+    if (s.type === "poly") { for (let i=0; i<=s.sides; i++) { let a = (Math.PI*2/s.sides)*i - Math.PI/2; addP(cx+Math.cos(a)*s.r, cy+Math.sin(a)*s.r); } }
+    else if (s.type === "star") { for (let i=0; i<=10; i++) { let a = (Math.PI/5)*i - Math.PI/2; let r = (i%2===0) ? s.rOut : s.rIn; addP(cx+Math.cos(a)*r, cy+Math.sin(a)*r); } }
+    else if (s.type === "heart") { for (let t=0; t<=Math.PI*2.01; t+=0.05) points.push({x: cx + 16*Math.sin(t)**3*s.r, y: cy - (13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*s.r}); }
+    else if (s.type === "halfCircle") { for (let a=Math.PI; a<=Math.PI*2.01; a+=0.05) points.push({x: cx+Math.cos(a)*s.r, y: cy+Math.sin(a)*s.r}); addP(cx-s.r, cy); addP(cx+s.r, cy); }
+    visited = new Array(points.length).fill(false);
+}
+
+function render() {
+    ctx.clearRect(0,0,400,400);
+    ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = "rgba(0,0,0,0.12)"; ctx.lineWidth = 15; ctx.lineCap = "round"; ctx.stroke();
+    if (drawPath.length > 0) {
+        ctx.beginPath(); ctx.moveTo(drawPath[0].x, drawPath[0].y);
+        for(let i=1; i<drawPath.length; i++) ctx.lineTo(drawPath[i].x, drawPath[i].y);
+        ctx.strokeStyle = "white"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke();
+    }
+}
+
+function handleInput(e) {
+    if (!gameActive || isPaused) return;
+    const rect = canvas.getBoundingClientRect();
+    const sc = 400 / rect.width;
+    const ev = e.touches ? e.touches[0] : e;
+    const cX = ev.clientX - rect.left; const cY = ev.clientY - rect.top;
+    fingerImg.style.display = "block"; fingerImg.style.left = cX + "px"; fingerImg.style.top = cY + "px";
+    if (!isDrawing) return;
+    if (!gameStartTime) gameStartTime = Date.now();
+    const x = cX * sc; const y = cY * sc;
+    drawPath.push({x, y}); render();
+    points.forEach((p, i) => { if (Math.sqrt((p.x-x)**2+(p.y-y)**2) < 18) visited[i] = true; });
+    let pgr = Math.min(100, Math.round((visited.filter(v=>v).length/points.length)*100));
+    document.getElementById('progress').innerText = pgr;
+    if (pgr >= 99) complete();
+}
+
+function complete() {
+    isDrawing = false; currentStageCount++;
+    if (currentStageCount > maxStages) showClear();
+    else { playSound('success'); setTimeout(() => { createShape(); drawPath = []; document.getElementById('progress').innerText = "0"; render(); }, 600); }
+}
+
+function handleEnd() {
+    if (!gameActive || !isDrawing || isPaused) return;
+    if (parseInt(document.getElementById('progress').innerText) < 99) { playSound('fail'); isDrawing = false; visited.fill(false); drawPath = []; render(); }
+}
+
+function showClear() {
+    gameActive = false; playSound('clear');
+    const totalTime = parseFloat(document.getElementById('timer').innerText);
+    document.getElementById('finalTime').innerText = totalTime.toFixed(2) + "s";
+    let oldBest = localStorage.getItem('dalgonaTotalBest');
+    if (!oldBest || oldBest === "null" || totalTime < parseFloat(oldBest)) {
+        localStorage.setItem('dalgonaTotalBest', totalTime);
+        document.getElementById('newRecordMsg').innerText = "🎊 NEW BEST RECORD! 🎊";
+        document.getElementById('best-total').innerText = totalTime.toFixed(2) + " s";
+    }
+    document.getElementById('clear-overlay').style.display = 'flex';
+}
+
+canvas.addEventListener('mousedown', () => { if(!isPaused) isDrawing = true; });
+canvas.addEventListener('touchstart', (e) => { if(!isPaused) { isDrawing = true; handleInput(e); e.preventDefault(); } }, {passive: false});
+window.addEventListener('mousemove', handleInput); window.addEventListener('touchmove', handleInput, {passive: false});
+window.addEventListener('mouseup', handleEnd); window.addEventListener('touchend', handleEnd);
+
+setInterval(() => { 
+    if (gameActive && gameStartTime && !isPaused) {
+        let now = Date.now();
+        document.getElementById('timer').innerText = ((now - gameStartTime - pausedTime) / 1000).toFixed(2);
+    }
+}, 30);
+
+loadBestRecord(); createShape(); render();
+</script>
+</body>
+</html>
