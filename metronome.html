@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕹️ 레트로 메트로놈 Pro+</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --panel-color: #16213e;
+            --accent-color: #00d2ff;
+            --btn-start: #2ecc71;
+            --btn-stop: #e74c3c;
+            --text-color: #e9ecef;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: var(--panel-color);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.1);
+            text-align: center;
+            width: 340px;
+            border: 3px solid #0f3460;
+        }
+
+        h1 { margin-bottom: 15px; font-size: 1.4rem; color: var(--accent-color); text-shadow: 2px 2px #000; }
+
+        .display-container {
+            background: #000;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid var(--accent-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bpm-value { font-size: 3.5rem; font-weight: bold; color: #00ff41; text-shadow: 0 0 10px #00ff41; }
+        .unit { font-size: 0.8rem; color: #00ff41; text-align: left; line-height: 1.2; }
+
+        .control-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        
+        .step-btn {
+            background: #0f3460;
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #081b31;
+        }
+
+        .step-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #081b31; }
+
+        /* 소리 선택 스타일 */
+        .sound-selector {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            background: #0f3460;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .sound-selector label {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+
+        .sound-selector input { display: none; }
+        .sound-selector input:checked + label {
+            background: var(--accent-color);
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .preset-btn {
+            background: #533483;
+            color: white;
+            border: none;
+            padding: 8px 0;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #3a235b;
+        }
+
+        .preset-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #3a235b; }
+
+        #startStopBtn {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background-color: var(--btn-start);
+            color: #fff;
+            box-shadow: 0 6px 0 #27ae60;
+            margin-bottom: 15px;
+        }
+
+        #startStopBtn.running {
+            background-color: var(--btn-stop);
+            box-shadow: 0 6px 0 #c0392b;
+        }
+
+        .slider-label { display: block; text-align: left; font-size: 0.7rem; margin-bottom: 5px; color: #888; }
+        input[type="range"] { width: 100%; accent-color: var(--accent-color); margin-bottom: 10px; }
+
+        .visualizer { height: 6px; background: #081b31; border-radius: 3px; overflow: hidden; }
+        #progress { width: 0%; height: 100%; background: #00ff41; box-shadow: 0 0 10px #00ff41; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>👾 RETRO BEAT</h1>
+    
+    <div class="display-container">
+        <div class="unit">STATUS<br><span id="statusTxt" style="color: #888;">READY</span></div>
+        <div class="bpm-value" id="bpmDisplay">120</div>
+        <div class="unit" style="text-align: right;">SPEED<br>BPM</div>
+    </div>
+
+    <div class="control-row">
+        <button class="step-btn" onclick="adjustBpm(-1)">-</button>
+        <input type="range" id="bpmRange" min="40" max="240" value="120">
+        <button class="step-btn" onclick="adjustBpm(1)">+</button>
+    </div>
+
+    <div class="sound-selector">
+        <input type="radio" name="sound" id="s1" value="classic" checked>
+        <label for="s1">CLASSIC</label>
+        <input type="radio" name="sound" id="s2" value="wood">
+        <label for="s2">WOOD</label>
+        <input type="radio" name="sound" id="s3" value="digital">
+        <label for="s3">DIGITAL</label>
+    </div>
+
+    <div class="preset-grid">
+        <button class="preset-btn" onclick="setBpm(60)">60</button>
+        <button class="preset-btn" onclick="setBpm(80)">80</button>
+        <button class="preset-btn" onclick="setBpm(100)">100</button>
+        <button class="preset-btn" onclick="setBpm(120)">120</button>
+        <button class="preset-btn" onclick="setBpm(140)">140</button>
+        <button class="preset-btn" onclick="setBpm(160)">160</button>
+        <button class="preset-btn" onclick="setBpm(180)">180</button>
+        <button class="preset-btn" onclick="setBpm(200)">200</button>
+    </div>
+
+    <label class="slider-label">🔊 MASTER VOLUME</label>
+    <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="0.5">
+
+    <button id="startStopBtn">START</button>
+
+    <div class="visualizer">
+        <div id="progress"></div>
+    </div>
+</div>
+
+<script>
+    let audioContext = null;
+    let isRunning = false;
+    let nextNoteTime = 0.0;
+    let timerID = null;
+    
+    let bpm = 120;
+    let volume = 0.5;
+    const lookahead = 25.0;
+    const scheduleAheadTime = 0.1;
+
+    const bpmRange = document.getElementById('bpmRange');
+    const bpmDisplay = document.getElementById('bpmDisplay');
+    const volumeRange = document.getElementById('volumeRange');
+    const startStopBtn = document.getElementById('startStopBtn');
+    const statusTxt = document.getElementById('statusTxt');
+    const progress = document.getElementById('progress');
+
+    function updateBpmDisplay() {
+        bpmDisplay.textContent = bpm;
+        bpmRange.value = bpm;
+    }
+
+    function setBpm(val) {
+        bpm = val;
+        updateBpmDisplay();
+    }
+
+    function adjustBpm(delta) {
+        bpm = Math.min(Math.max(parseInt(bpm) + delta, 40), 240);
+        updateBpmDisplay();
+    }
+
+    bpmRange.addEventListener('input', (e) => {
+        bpm = e.target.value;
+        bpmDisplay.textContent = bpm;
+    });
+
+    volumeRange.addEventListener('input', (e) => { volume = e.target.value; });
+
+    function playSound(time) {
+        const type = document.querySelector('input[name="sound"]:checked').value;
+        const osc = audioContext.createOscillator();
+        const envelope = audioContext.createGain();
+
+        // 사운드 타입별 설정
+        if (type === 'classic') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, time);
+        } else if (type === 'wood') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, time);
+        } else if (type === 'digital') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1200, time);
+        }
+
+        envelope.gain.setValueAtTime(volume, time);
+        envelope.gain.exponentialRampToValueAtTime(0.001, time + (type === 'wood' ? 0.05 : 0.1));
+
+        osc.connect(envelope);
+        envelope.connect(audioContext.destination);
+
+        osc.start(time);
+        osc.stop(time + 0.1);
+
+        // 시각 효과
+        const msUntilNote = (time - audioContext.currentTime) * 1000;
+        setTimeout(() => {
+            progress.style.width = '100%';
+            setTimeout(() => { progress.style.width = '0%'; }, 50);
+        }, msUntilNote);
+    }
+
+    function scheduler() {
+        while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+            playSound(nextNoteTime);
+            nextNoteTime += 60.0 / bpm;
+        }
+        timerID = setTimeout(scheduler, lookahead);
+    }
+
+    function toggleMetronome() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (isRunning) {
+            isRunning = false;
+            clearTimeout(timerID);
+            startStopBtn.textContent = "START";
+            startStopBtn.classList.remove('running');
+            statusTxt.textContent = "STOPPED";
+            statusTxt.style.color = "#888";
+        } else {
+            isRunning = true;
+            nextNoteTime = audioContext.currentTime + 0.05;
+            scheduler();
+            startStopBtn.textContent = "STOP";
+            startStopBtn.classList.add('running');
+            statusTxt.textContent = "PLAYING";
+            statusTxt.style.color = "#00ff41";
+        }
+    }
+
+    startStopBtn.addEventListener('click', toggleMetronome);
+</script>
+
+</body>
+</html>

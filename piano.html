@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Premium Multi-Piano</title>
+    <style>
+        :root {
+            --primary-color: #00d4ff;
+            --bg-color: #0f172a;
+            --btn-bg: #1e293b;
+        }
+
+        body {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; background: var(--bg-color);
+            font-family: 'Pretendard', sans-serif; overflow: hidden; touch-action: manipulation;
+        }
+
+        /* 상단 여백 대폭 축소 */
+        .header { text-align: center; margin-bottom: 15px; margin-top: -20px; }
+        h1 {
+            font-size: 1.8rem; color: #fff; letter-spacing: 3px; margin: 0;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        /* 직관적인 버튼 그룹 UI */
+        .instrument-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .inst-btn {
+            padding: 8px 16px;
+            background: var(--btn-bg);
+            border: 1px solid #334155;
+            color: #94a3b8;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .inst-btn:hover { color: #fff; border-color: var(--primary-color); }
+
+        .inst-btn.active {
+            background: var(--primary-color);
+            color: #000;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        /* 피아노 디자인 */
+        .piano-wrapper {
+            background: #000; padding: 35px 15px 15px 15px; border-radius: 12px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8); display: flex;
+            position: relative;
+        }
+
+        .piano-wrapper::before {
+            content: "GEMINI DIGITAL"; position: absolute; top: 10px; left: 50%;
+            transform: translateX(-50%); color: #333; font-size: 10px; letter-spacing: 2px;
+        }
+
+        .piano-container { display: flex; }
+        .key { cursor: pointer; user-select: none; transition: all 0.08s ease; }
+
+        .white {
+            width: 55px; height: 200px; background: linear-gradient(to bottom, #fff 0%, #e2e8f0 100%);
+            border: 1px solid #cbd5e1; border-radius: 0 0 5px 5px; z-index: 1;
+        }
+
+        .black {
+            width: 34px; height: 125px; background: linear-gradient(to bottom, #1e293b 0%, #020617 100%);
+            margin-left: -17px; margin-right: -17px; z-index: 2;
+            border-radius: 0 0 4px 4px; border: 1px solid #000;
+        }
+
+        /* 연주 중인 건반 */
+        .key.active {
+            background: var(--primary-color) !important;
+            transform: translateY(4px);
+            box-shadow: 0 5px 20px var(--primary-color);
+        }
+
+        .info { margin-top: 25px; color: #475569; font-size: 0.8rem; }
+
+        @media (max-width: 650px) {
+            .white { width: 38px; height: 160px; }
+            .black { width: 24px; height: 100px; margin-left: -12px; margin-right: -12px; }
+            .inst-btn { padding: 6px 12px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>GEMINI PIANO</h1>
+    </div>
+
+    <div class="instrument-selector" id="selector">
+        <button class="inst-btn active" data-type="triangle">Piano</button>
+        <button class="inst-btn" data-type="sine">Flute</button>
+        <button class="inst-btn" data-type="square">Retro 8-bit</button>
+        <button class="inst-btn" data-type="sawtooth">Synth Lead</button>
+    </div>
+
+    <div class="piano-wrapper">
+        <div class="piano-container">
+            <div class="key white" data-key="a" data-note="C"></div>
+            <div class="key black" data-key="w" data-note="Cs"></div>
+            <div class="key white" data-key="s" data-note="D"></div>
+            <div class="key black" data-key="e" data-note="Ds"></div>
+            <div class="key white" data-key="d" data-note="E"></div>
+            <div class="key white" data-key="f" data-note="F"></div>
+            <div class="key black" data-key="t" data-note="Fs"></div>
+            <div class="key white" data-key="g" data-note="G"></div>
+            <div class="key black" data-key="y" data-note="Gs"></div>
+            <div class="key white" data-key="h" data-note="A"></div>
+            <div class="key black" data-key="u" data-note="As"></div>
+            <div class="key white" data-key="j" data-note="B"></div>
+            <div class="key white" data-key="k" data-note="C2"></div>
+        </div>
+    </div>
+
+    <div class="info">
+        PC: A W S E D F T G Y H U J K
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let currentInstrument = 'triangle';
+        
+        const frequencies = {
+            "C": 261.63, "Cs": 277.18, "D": 293.66, "Ds": 311.13, 
+            "E": 329.63, "F": 349.23, "Fs": 369.99, "G": 392.00, 
+            "Gs": 415.30, "A": 440.00, "As": 466.16, "B": 493.88, "C2": 523.25
+        };
+
+        // 악기 버튼 클릭 이벤트
+        const buttons = document.querySelectorAll('.inst-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentInstrument = btn.dataset.type;
+            });
+        });
+
+        const keys = document.querySelectorAll('.key');
+        const keyMap = {};
+        let activeOscillators = {};
+
+        keys.forEach(key => {
+            keyMap[key.dataset.key] = key;
+            ['mousedown', 'touchstart'].forEach(evt => {
+                key.addEventListener(evt, (e) => { 
+                    e.preventDefault(); 
+                    playNote(key); 
+                });
+            });
+            ['mouseup', 'mouseleave', 'touchend'].forEach(evt => {
+                key.addEventListener(evt, () => stopNote(key));
+            });
+        });
+
+        function playNote(keyElement) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const note = keyElement.dataset.note;
+            if (activeOscillators[note]) return;
+
+            keyElement.classList.add('active');
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = currentInstrument; 
+            oscillator.frequency.setValueAtTime(frequencies[note], audioCtx.currentTime);
+
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            activeOscillators[note] = { osc: oscillator, gain: gainNode };
+        }
+
+        function stopNote(keyElement) {
+            const note = keyElement.dataset.note;
+            if (activeOscillators[note]) {
+                keyElement.classList.remove('active');
+                const { osc, gain } = activeOscillators[note];
+                gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                setTimeout(() => { 
+                    osc.stop(); 
+                    osc.disconnect(); 
+                }, 200);
+                delete activeOscillators[note];
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            const key = e.key.toLowerCase();
+            if (keyMap[key]) playNote(keyMap[key]);
+        });
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keyMap[key]) stopNote(keyMap[key]);
+        });
+    </script>
+</body>
+</html>
