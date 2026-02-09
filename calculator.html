@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart 3D Multi-Calculator</title>
+    <title>Compact 3D Multi-Calculator</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -23,54 +23,50 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 5px 10px 0 10px;
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            padding: 5px 10px;
+            font-family: 'Pretendard', sans-serif;
             box-sizing: border-box;
         }
 
-        /* 제목 섹션: 이모지 추가 및 스타일 */
         .main-title {
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 800;
             color: #fff;
-            margin: 10px 0 15px 0;
-            letter-spacing: 1px;
+            margin: 8px 0 12px 0;
             display: flex;
             align-items: center;
-            gap: 10px;
-            text-shadow: 0 0 15px rgba(252, 163, 17, 0.3);
+            gap: 8px;
         }
 
+        /* 탭 버튼: 세로 사이즈 축소 */
         .tabs {
             display: flex;
             gap: 6px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             width: 100%;
             max-width: 360px;
         }
         .tab-btn {
             flex: 1;
-            padding: 10px 0;
+            padding: 7px 0; /* 세로 사이즈 축소 */
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             background: #2a2a2a;
             color: #888;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
-            transition: 0.2s;
         }
         .tab-btn.active {
             background: var(--btn-op);
             color: #000;
-            box-shadow: 0 4px 10px rgba(252, 163, 17, 0.2);
         }
 
         .calculator-container {
             background: var(--calc-bg);
-            padding: 18px;
-            border-radius: 25px;
-            box-shadow: 10px 10px 30px #050505, -5px -5px 15px #2a2a2a;
+            padding: 15px;
+            border-radius: 22px;
+            box-shadow: 10px 10px 30px #050505;
             width: 100%;
             max-width: 360px;
             box-sizing: border-box;
@@ -79,96 +75,96 @@
 
         .display {
             width: 100%;
-            height: 65px;
+            height: 60px;
             background: #000;
             border-radius: 12px;
             text-align: right;
             padding: 10px 15px;
-            font-size: 32px;
+            font-size: 30px;
             font-weight: bold;
             color: var(--lcd-color);
             box-shadow: inset 4px 4px 10px #000;
             box-sizing: border-box;
             border: 1px solid #222;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
-        .mode-section { display: none; margin-bottom: 12px; }
+        .mode-section { display: none; margin-bottom: 10px; }
         .mode-section.active { display: block; }
 
+        /* 환율 섹션: 여백 및 사이즈 축소 */
         .currency-box {
             background: #111;
-            padding: 10px;
-            border-radius: 12px;
+            padding: 8px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
         .curr-row {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .curr-row select {
             flex: 1;
             background: #2a2a2a;
             color: #fff;
             border: none;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 6px;
+            border-radius: 5px;
+            font-size: 12px;
         }
         .curr-res {
             flex: 1;
             background: #333;
             color: var(--btn-op);
-            height: 45px;
+            height: 36px; /* 높이 축소 */
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 5px;
+            font-size: 13px;
             font-weight: bold;
+        }
+
+        /* 정보바: 한 줄 표현 */
+        .info-bar {
+            margin-top: 8px;
+            font-size: 10px;
+            color: #999;
             text-align: center;
-            line-height: 1.2;
-            padding: 0 5px;
+            background: rgba(255,255,255,0.05);
+            padding: 4px;
+            border-radius: 5px;
+            white-space: nowrap; /* 한 줄 유지 */
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
+            gap: 8px;
         }
         button {
-            height: 55px;
+            height: 52px;
             border: none;
-            border-radius: 14px;
-            font-size: 22px;
+            border-radius: 12px;
+            font-size: 20px;
             font-weight: 700;
             cursor: pointer;
             background: var(--btn-num);
             color: #fff;
-            box-shadow: 4px 4px 8px #0a0a0a, -2px -2px 6px #3a3a3a;
-            transition: all 0.1s ease;
+            box-shadow: 3px 3px 6px #0a0a0a, -1px -1px 4px #3a3a3a;
         }
         button:active {
-            box-shadow: inset 3px 3px 6px #0a0a0a;
-            transform: scale(0.95);
+            box-shadow: inset 2px 2px 5px #0a0a0a;
+            transform: scale(0.96);
         }
-        .op { background: var(--btn-op); color: #000; font-size: 24px; }
-        .func { background: var(--btn-func); font-size: 18px; }
-        .sci { background: var(--btn-sci); color: #000; font-size: 15px; height: 45px; }
-
-        .info-bar {
-            margin-top: 10px;
-            font-size: 11px;
-            color: #888;
-            text-align: center;
-            line-height: 1.4;
-            background: rgba(0,0,0,0.3);
-            padding: 6px;
-            border-radius: 8px;
-        }
+        .op { background: var(--btn-op); color: #000; font-size: 22px; }
+        .func { background: var(--btn-func); font-size: 16px; }
+        .sci { background: var(--btn-sci); color: #000; font-size: 14px; height: 38px; }
     </style>
 </head>
 <body>
@@ -201,15 +197,13 @@
                         <option value="USD">USD 미국</option>
                         <option value="JPY">JPY 일본</option>
                         <option value="EUR">EUR 유럽</option>
-                        <option value="CNY">CNY 중국</option>
                     </select>
-                    <button style="width:32px; height:32px; background:none; border:1px solid #444; color:#fff; border-radius:50%; cursor:pointer; font-size: 16px;" onclick="swapCurrencies()">⇄</button>
+                    <button style="width:26px; height:26px; background:none; border:1px solid #444; color:#fff; border-radius:50%; cursor:pointer; font-size: 12px;" onclick="swapCurrencies()">⇄</button>
                     <select id="toCurr" onchange="convert()">
                         <option value="USD" selected>USD 미국</option>
                         <option value="KRW">KRW 한국</option>
                         <option value="JPY">JPY 일본</option>
                         <option value="EUR">EUR 유럽</option>
-                        <option value="CNY">CNY 중국</option>
                     </select>
                 </div>
                 <div class="curr-row">
@@ -217,7 +211,7 @@
                     <div class="curr-res" id="resultLabel">결과 대기</div>
                 </div>
             </div>
-            <div class="info-bar" id="infoBar">로딩 중...</div>
+            <div class="info-bar" id="infoBar">환율 정보 로딩 중...</div>
         </div>
 
         <div class="grid">
@@ -261,8 +255,7 @@
 
         function exe() {
             try {
-                let cleanValue = screen.value.replace(/×/g, '*').replace(/÷/g, '/');
-                let res = eval(cleanValue);
+                let res = eval(screen.value.replace(/×/g, '*').replace(/÷/g, '/'));
                 screen.value = Number.isInteger(res) ? res : res.toFixed(3);
             } catch { screen.value = "Error"; }
         }
@@ -285,8 +278,11 @@
                 const rate = data.rates[to];
                 document.getElementById('resultLabel').innerText = (amount * rate).toLocaleString(undefined, {maximumFractionDigits:2}) + " " + to;
                 document.getElementById('currInputLabel').innerText = amount.toLocaleString() + " " + from;
+                
                 const now = new Date();
-                document.getElementById('infoBar').innerHTML = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}<br>1 ${from} = ${rate.toFixed(2)} ${to}`;
+                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                // 정보바 한 줄로 표시
+                document.getElementById('infoBar').innerText = `${now.toLocaleDateString()} ${timeStr} | 1 ${from} = ${rate.toFixed(2)} ${to}`;
             } catch (e) { document.getElementById('resultLabel').innerText = "오류"; }
         }
     </script>
