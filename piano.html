@@ -8,79 +8,87 @@
         :root {
             --primary-color: #00d4ff;
             --bg-color: #050505;
-            --key-gap-color: #000;
+            --line-color: #000000; /* 건반 사이 선명한 검은색 */
         }
 
         body {
             display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
             min-height: 100vh; margin: 0; background: var(--bg-color);
             font-family: 'Inter', sans-serif; overflow: hidden; touch-action: manipulation;
-            padding-top: 5px; /* 상단 여백 최소화 */
+            padding-top: 10px;
         }
 
-        .header { text-align: center; margin-bottom: 10px; }
+        .header { text-align: center; margin-bottom: 15px; }
         h1 { 
-            font-size: 2rem; color: #fff; letter-spacing: 10px; margin: 0; 
-            text-shadow: 0 0 15px var(--primary-color);
-            font-weight: 900;
+            font-size: 2.2rem; color: #fff; letter-spacing: 12px; margin: 0; 
+            text-shadow: 0 0 15px var(--primary-color); font-weight: 900;
         }
 
-        .btn-group { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
+        .btn-group { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
 
         .btn {
-            padding: 8px 16px; background: #111; border: 1px solid #333;
-            color: #777; border-radius: 20px; cursor: pointer; font-size: 0.8rem; transition: 0.2s;
+            padding: 8px 18px; background: #111; border: 1px solid #333;
+            color: #888; border-radius: 25px; cursor: pointer; font-size: 0.8rem; transition: 0.2s;
         }
 
-        .btn.active { background: #222; color: var(--primary-color); border-color: var(--primary-color); box-shadow: 0 0 10px rgba(0, 212, 255, 0.2); }
+        .btn.active { background: #222; color: var(--primary-color); border-color: var(--primary-color); }
 
         /* 피아노 본체 */
         .piano-wrapper {
-            background: #111; padding: 30px 10px 10px 10px; border-radius: 8px;
+            background: #111; padding: 35px 12px 12px 12px; border-radius: 8px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.9);
             max-width: 98vw; overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .piano-container { 
-            display: flex; position: relative; background: var(--key-gap-color); 
-            border: 1px solid var(--key-gap-color);
+            display: flex; position: relative; 
+            background: var(--line-color);
+            padding: 0;
+            /* 전체 외곽선 */
+            border: 2px solid var(--line-color);
         }
 
         .key { position: relative; cursor: pointer; user-select: none; box-sizing: border-box; }
 
-        /* 기본 가로 모드 디자인 */
+        /* 흰 건반: gap 대신 border를 사용하여 선명한 줄 표현 */
         .white {
-            width: 55px; height: 220px;
-            background: linear-gradient(to bottom, #fff 0%, #d1d5db 100%);
-            border-right: 2px solid var(--key-gap-color); border-radius: 0 0 5px 5px; z-index: 1;
+            width: 55px; height: 230px;
+            background: linear-gradient(to bottom, #ffffff 0%, #e5e7eb 100%);
+            border-left: 2px solid var(--line-color); /* 왼쪽 경계선 */
+            border-radius: 0 0 5px 5px; z-index: 1;
         }
+        
+        /* 첫 번째 건반은 왼쪽 보더 제거 */
+        .white:first-child { border-left: none; }
+
+        /* 검은 건반 */
         .black {
-            width: 34px; height: 130px;
+            width: 36px; height: 140px;
             background: linear-gradient(to bottom, #333 0%, #000 100%);
-            margin-left: -17px; margin-right: -17px; z-index: 5;
+            margin-left: -18px; margin-right: -18px; z-index: 5;
             border-radius: 0 0 4px 4px; border: 1px solid #000;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
         }
 
         .key.active { background: var(--primary-color) !important; border-color: var(--primary-color); }
 
-        /* [모바일 세로 방향 자동 대응] */
+        /* 모바일 세로 모드 */
         @media (max-orientation: portrait) {
-            .piano-wrapper { padding: 10px 10px 10px 30px; max-height: 75vh; overflow-y: auto; overflow-x: hidden; }
-            .piano-container { flex-direction: column; width: 80vw; }
+            .piano-wrapper { padding: 12px 12px 12px 35px; max-height: 70vh; overflow-y: auto; overflow-x: hidden; }
+            .piano-container { flex-direction: column; width: 75vw; border: 2px solid var(--line-color); }
             .white {
                 width: 100%; height: 55px;
-                border-right: none; border-bottom: 2px solid var(--key-gap-color);
+                border-left: none;
+                border-top: 2px solid var(--line-color); /* 세로일 땐 위쪽 경계선 */
                 border-radius: 0 5px 5px 0;
             }
+            .white:first-child { border-top: none; }
             .black {
-                width: 60%; height: 34px;
-                margin-top: -17px; margin-bottom: -17px; margin-left: 0;
+                width: 60%; height: 36px;
+                margin-top: -18px; margin-bottom: -18px; margin-left: 0;
                 border-radius: 0 4px 4px 0;
             }
         }
-
-        .info { margin-top: 15px; color: #333; font-size: 0.7rem; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -114,10 +122,19 @@
         </div>
     </div>
 
-    <div class="info">PC: A S D F G H J K</div>
-
     <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // AudioContext는 선언만 해두고 첫 터치 때 활성화
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
         let currentInstrument = 'triangle';
         const frequencies = {
             "C": 261.63, "Cs": 277.18, "D": 293.66, "Ds": 311.13, 
@@ -125,9 +142,9 @@
             "Gs": 415.30, "A": 440.00, "As": 466.16, "B": 493.88, "C2": 523.25
         };
 
-        // 악기 선택 로직
         document.querySelectorAll('#instGroup .btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                initAudio(); // 버튼 클릭 시에도 오디오 활성화
                 document.querySelectorAll('#instGroup .btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentInstrument = btn.dataset.type;
@@ -138,16 +155,21 @@
         let activeOscillators = {};
 
         function playNote(keyElement) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            initAudio(); // 건반 누르는 즉시 오디오 컨텍스트 상태 확인 및 재개
+            
             const note = keyElement.dataset.note;
             if (activeOscillators[note]) return;
+            
             keyElement.classList.add('active');
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
+            
             osc.type = currentInstrument; 
             osc.frequency.setValueAtTime(frequencies[note], audioCtx.currentTime);
+            
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
+            
             osc.connect(gain).connect(audioCtx.destination);
             osc.start();
             activeOscillators[note] = { osc, gain };
@@ -158,25 +180,40 @@
             if (activeOscillators[note]) {
                 keyElement.classList.remove('active');
                 const { osc, gain } = activeOscillators[note];
-                gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-                setTimeout(() => { osc.stop(); osc.disconnect(); }, 200);
+                gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                setTimeout(() => { 
+                    try { osc.stop(); osc.disconnect(); } catch(e) {}
+                }, 100);
                 delete activeOscillators[note];
             }
         }
 
         keys.forEach(key => {
-            ['mousedown', 'touchstart'].forEach(evt => {
-                key.addEventListener(evt, (e) => { e.preventDefault(); playNote(key); });
+            // 터치와 마우스 이벤트를 분리하여 처리 (모바일 즉각 반응)
+            key.addEventListener('touchstart', (e) => {
+                e.preventDefault(); 
+                playNote(key);
+            }, {passive: false});
+
+            key.addEventListener('mousedown', (e) => {
+                playNote(key);
             });
-            ['mouseup', 'mouseleave', 'touchend'].forEach(evt => {
-                key.addEventListener(evt, () => stopNote(key));
+
+            ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => {
+                key.addEventListener(evt, (e) => {
+                    stopNote(key);
+                });
             });
         });
 
         const keyMap = {};
         keys.forEach(key => keyMap[key.dataset.key] = key);
-        window.addEventListener('keydown', (e) => { if(!e.repeat && keyMap[e.key.toLowerCase()]) playNote(keyMap[e.key.toLowerCase()]); });
-        window.addEventListener('keyup', (e) => { if(keyMap[e.key.toLowerCase()]) stopNote(keyMap[e.key.toLowerCase()]); });
+        window.addEventListener('keydown', (e) => { 
+            if(!e.repeat && keyMap[e.key.toLowerCase()]) playNote(keyMap[e.key.toLowerCase()]); 
+        });
+        window.addEventListener('keyup', (e) => { 
+            if(keyMap[e.key.toLowerCase()]) stopNote(keyMap[e.key.toLowerCase()]); 
+        });
     </script>
 </body>
 </html>
