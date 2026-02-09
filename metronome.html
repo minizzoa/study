@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🕹️ 레트로 메트로놈 Pro+</title>
     <style>
         :root {
@@ -15,125 +15,131 @@
         }
 
         body {
-            font-family: 'Courier New', Courier, monospace;
+            /* 폰트를 sans-serif로 변경 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* 상단 정렬로 변경 */
             min-height: 100vh;
             margin: 0;
+            padding-top: 20px; /* 상단 여백 최소화 */
         }
 
         .container {
             background-color: var(--panel-color);
-            padding: 25px;
+            padding: 20px;
             border-radius: 20px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             text-align: center;
-            width: 340px;
-            border: 3px solid #0f3460;
+            width: 90%;
+            max-width: 340px;
+            border: 2px solid #0f3460;
         }
 
-        h1 { margin-bottom: 15px; font-size: 1.4rem; color: var(--accent-color); text-shadow: 2px 2px #000; }
+        h1 { 
+            margin: 0 0 15px 0; 
+            font-size: 1.2rem; 
+            color: var(--accent-color);
+            letter-spacing: -0.5px;
+        }
 
         .display-container {
             background: #000;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
             border: 2px solid var(--accent-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .bpm-value { font-size: 3.5rem; font-weight: bold; color: #00ff41; text-shadow: 0 0 10px #00ff41; }
-        .unit { font-size: 0.8rem; color: #00ff41; text-align: left; line-height: 1.2; }
+        .bpm-value { font-size: 3.2rem; font-weight: 800; color: #00ff41; }
+        .unit { font-size: 0.75rem; color: #00ff41; text-align: left; line-height: 1.2; font-weight: bold; }
 
-        .control-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .control-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
         
         .step-btn {
             background: #0f3460;
             color: white;
             border: none;
-            width: 45px;
+            width: 50px;
             height: 45px;
             border-radius: 10px;
             font-size: 1.5rem;
+            font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 0 #081b31;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        .step-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #081b31; }
+        .step-btn:active { background: var(--accent-color); }
 
-        /* 소리 선택 스타일 */
         .sound-selector {
             display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
+            gap: 4px;
+            margin-bottom: 15px;
             background: #0f3460;
-            padding: 5px;
+            padding: 4px;
             border-radius: 8px;
         }
 
         .sound-selector label {
             flex: 1;
-            padding: 8px;
-            font-size: 0.8rem;
+            padding: 10px 0;
+            font-size: 0.75rem;
+            font-weight: bold;
             cursor: pointer;
-            border-radius: 5px;
-            transition: 0.2s;
+            border-radius: 6px;
         }
 
         .sound-selector input { display: none; }
         .sound-selector input:checked + label {
             background: var(--accent-color);
             color: #1a1a2e;
-            font-weight: bold;
         }
 
         .preset-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-bottom: 20px;
+            gap: 6px;
+            margin-bottom: 15px;
         }
 
         .preset-btn {
             background: #533483;
             color: white;
             border: none;
-            padding: 8px 0;
-            border-radius: 5px;
-            font-size: 0.8rem;
+            padding: 10px 0;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 3px 0 #3a235b;
         }
 
-        .preset-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #3a235b; }
+        .preset-btn:active { opacity: 0.8; }
 
         #startStopBtn {
             width: 100%;
-            padding: 18px;
-            font-size: 1.3rem;
-            font-weight: bold;
+            padding: 16px;
+            font-size: 1.2rem;
+            font-weight: 800;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             background-color: var(--btn-start);
             color: #fff;
-            box-shadow: 0 6px 0 #27ae60;
             margin-bottom: 15px;
+            transition: 0.2s;
         }
 
-        #startStopBtn.running {
-            background-color: var(--btn-stop);
-            box-shadow: 0 6px 0 #c0392b;
-        }
+        #startStopBtn.running { background-color: var(--btn-stop); }
 
-        .slider-label { display: block; text-align: left; font-size: 0.7rem; margin-bottom: 5px; color: #888; }
-        input[type="range"] { width: 100%; accent-color: var(--accent-color); margin-bottom: 10px; }
+        .slider-label { display: block; text-align: left; font-size: 0.7rem; margin-bottom: 4px; color: #888; font-weight: bold; }
+        input[type="range"] { width: 100%; accent-color: var(--accent-color); margin-bottom: 10px; height: 20px; }
 
         .visualizer { height: 6px; background: #081b31; border-radius: 3px; overflow: hidden; }
         #progress { width: 0%; height: 100%; background: #00ff41; box-shadow: 0 0 10px #00ff41; }
@@ -145,13 +151,13 @@
     <h1>👾 RETRO BEAT</h1>
     
     <div class="display-container">
-        <div class="unit">STATUS<br><span id="statusTxt" style="color: #888;">READY</span></div>
+        <div class="unit">STATUS<br><span id="statusTxt" style="color: #666;">READY</span></div>
         <div class="bpm-value" id="bpmDisplay">120</div>
         <div class="unit" style="text-align: right;">SPEED<br>BPM</div>
     </div>
 
     <div class="control-row">
-        <button class="step-btn" onclick="adjustBpm(-1)">-</button>
+        <button class="step-btn" onclick="adjustBpm(-1)">−</button>
         <input type="range" id="bpmRange" min="40" max="240" value="120">
         <button class="step-btn" onclick="adjustBpm(1)">+</button>
     </div>
@@ -231,7 +237,6 @@
         const osc = audioContext.createOscillator();
         const envelope = audioContext.createGain();
 
-        // 사운드 타입별 설정
         if (type === 'classic') {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(880, time);
@@ -252,12 +257,11 @@
         osc.start(time);
         osc.stop(time + 0.1);
 
-        // 시각 효과
         const msUntilNote = (time - audioContext.currentTime) * 1000;
         setTimeout(() => {
             progress.style.width = '100%';
             setTimeout(() => { progress.style.width = '0%'; }, 50);
-        }, msUntilNote);
+        }, Math.max(0, msUntilNote));
     }
 
     function scheduler() {
@@ -279,7 +283,7 @@
             startStopBtn.textContent = "START";
             startStopBtn.classList.remove('running');
             statusTxt.textContent = "STOPPED";
-            statusTxt.style.color = "#888";
+            statusTxt.style.color = "#666";
         } else {
             isRunning = true;
             nextNoteTime = audioContext.currentTime + 0.05;
