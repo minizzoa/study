@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart 3D Multi-Calculator</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --calc-bg: #1e1e1e;
+            --btn-num: #333333;
+            --btn-op: #fca311;
+            --btn-func: #ef476f;
+            --btn-sci: #4cc9f0;
+            --lcd-color: #00ffcc;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            font-family: 'Pretendard', sans-serif;
+            box-sizing: border-box;
+        }
+
+        /* 제목: 크기 최적화 */
+        .main-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 10px 0 20px 0;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(252, 163, 17, 0.5);
+        }
+
+        /* 탭 스타일 */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 360px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            border-radius: 12px;
+            background: #2a2a2a;
+            color: #888;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            background: var(--btn-op);
+            color: #000;
+            box-shadow: 0 4px 12px rgba(252, 163, 17, 0.3);
+        }
+
+        /* 계산기 본체 */
+        .calculator-container {
+            background: var(--calc-bg);
+            padding: 20px;
+            border-radius: 30px;
+            box-shadow: 15px 15px 40px #050505, -5px -5px 20px #2a2a2a;
+            width: 100%;
+            max-width: 360px;
+            box-sizing: border-box;
+            border: 1px solid #333;
+        }
+
+        /* 디스플레이 */
+        .display {
+            width: 100%;
+            height: 70px;
+            background: #000;
+            border-radius: 15px;
+            text-align: right;
+            padding: 15px;
+            font-size: 28px;
+            color: var(--lcd-color);
+            box-shadow: inset 4px 4px 10px #000;
+            box-sizing: border-box;
+            border: 1px solid #222;
+            margin-bottom: 15px;
+        }
+
+        /* 모드별 섹션 제어 */
+        .mode-section { display: none; margin-bottom: 15px; }
+        .mode-section.active { display: block; }
+
+        /* 환율 UI */
+        .currency-box {
+            background: #111;
+            padding: 12px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .curr-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .curr-row select, .curr-res {
+            flex: 1;
+            background: #2a2a2a;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .curr-res { background: #333; font-weight: bold; color: var(--btn-op); min-height: 36px; display: flex; align-items: center; justify-content: center; }
+        .swap-btn {
+            background: none; border: 1px solid #444; color: #fff;
+            padding: 5px; border-radius: 50%; cursor: pointer; width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* 버튼 그리드 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        button {
+            height: 55px;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            background: var(--btn-num);
+            color: #fff;
+            box-shadow: 4px 4px 8px #0a0a0a, -2px -2px 6px #3a3a3a;
+            transition: 0.1s;
+        }
+        button:active {
+            box-shadow: inset 3px 3px 6px #0a0a0a;
+            transform: scale(0.97);
+        }
+        .op { background: var(--btn-op); color: #000; }
+        .func { background: var(--btn-func); }
+        .sci { background: var(--btn-sci); color: #000; font-size: 14px; height: 45px; }
+
+        /* 환율 모드에서만 보이는 정보창 */
+        .info-bar {
+            margin-top: 12px;
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+            line-height: 1.4;
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="main-title">계산기</h1>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="setMode('standard')">일반</button>
+        <button class="tab-btn" onclick="setMode('scientific')">공학</button>
+        <button class="tab-btn" onclick="setMode('currency')">환율</button>
+    </div>
+
+    <div class="calculator-container">
+        <input type="text" id="screen" class="display" value="0" readonly>
+
+        <div id="sci-panel" class="mode-section">
+            <div class="grid">
+                <button class="sci" onclick="input('Math.sin(')">sin</button>
+                <button class="sci" onclick="input('Math.cos(')">cos</button>
+                <button class="sci" onclick="input('Math.sqrt(')">√</button>
+                <button class="sci" onclick="input('**')">xʸ</button>
+            </div>
+        </div>
+
+        <div id="cur-panel" class="mode-section">
+            <div class="currency-box">
+                <div class="curr-row">
+                    <select id="fromCurr" onchange="convert()">
+                        <option value="KRW">KRW 한국</option>
+                        <option value="USD">USD 미국</option>
+                        <option value="JPY">JPY 일본</option>
+                        <option value="EUR">EUR 유럽</option>
+                        <option value="CNY">CNY 중국</option>
+                    </select>
+                    <button class="swap-btn" onclick="swapCurrencies()">⇄</button>
+                    <select id="toCurr" onchange="convert()">
+                        <option value="USD" selected>USD 미국</option>
+                        <option value="KRW">KRW 한국</option>
+                        <option value="JPY">JPY 일본</option>
+                        <option value="EUR">EUR 유럽</option>
+                        <option value="CNY">CNY 중국</option>
+                    </select>
+                </div>
+                <div class="curr-row">
+                    <div class="curr-res" id="currInputLabel">0 KRW</div>
+                    <div class="curr-res" id="resultLabel">결과 대기 중</div>
+                </div>
+            </div>
+            <div class="info-bar" id="infoBar">
+                시간 및 환율 정보 로딩 중...
+            </div>
+        </div>
+
+        <div class="grid">
+            <button class="func" onclick="clearAll()">AC</button>
+            <button class="func" onclick="del()">DEL</button>
+            <button class="op" onclick="input('%')">%</button>
+            <button class="op" onclick="input('/')">÷</button>
+
+            <button onclick="input('7')">7</button>
+            <button onclick="input('8')">8</button>
+            <button onclick="input('9')">9</button>
+            <button class="op" onclick="input('*')">×</button>
+
+            <button onclick="input('4')">4</button>
+            <button onclick="input('5')">5</button>
+            <button onclick="input('6')">6</button>
+            <button class="op" onclick="input('-')">-</button>
+
+            <button onclick="input('1')">1</button>
+            <button onclick="input('2')">2</button>
+            <button onclick="input('3')">3</button>
+            <button class="op" onclick="input('+')">+</button>
+
+            <button style="grid-column: span 2;" onclick="input('0')">0</button>
+            <button onclick="input('.')">.</button>
+            <button class="op" style="background:#fff; color:#000" onclick="exe()">=</button>
+        </div>
+    </div>
+
+    <script>
+        const screen = document.getElementById('screen');
+        let currentMode = 'standard';
+
+        function setMode(m) {
+            currentMode = m;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('sci-panel').classList.toggle('active', m === 'scientific');
+            document.getElementById('cur-panel').classList.toggle('active', m === 'currency');
+            
+            clearAll();
+        }
+
+        function input(v) {
+            if (screen.value === "0") screen.value = v;
+            else screen.value += v;
+            if(currentMode === 'currency') convert();
+        }
+
+        function clearAll() { screen.value = "0"; if(currentMode === 'currency') convert(); }
+        function del() { screen.value = screen.value.slice(0, -1) || "0"; if(currentMode === 'currency') convert(); }
+
+        function exe() {
+            try {
+                let res = eval(screen.value.replace(/×/g, '*').replace(/÷/g, '/'));
+                screen.value = Number.isInteger(res) ? res : res.toFixed(4);
+            } catch { screen.value = "Error"; }
+        }
+
+        function swapCurrencies() {
+            const from = document.getElementById('fromCurr');
+            const to = document.getElementById('toCurr');
+            [from.value, to.value] = [to.value, from.value];
+            convert();
+        }
+
+        async function convert() {
+            if(currentMode !== 'currency') return;
+            const from = document.getElementById('fromCurr').value;
+            const to = document.getElementById('toCurr').value;
+            const amount = parseFloat(screen.value) || 0;
+            
+            try {
+                const res = await fetch(`https://open.er-api.com/v6/latest/${from}`);
+                const data = await res.json();
+                const rate = data.rates[to];
+                document.getElementById('resultLabel').innerText = (amount * rate).toLocaleString(undefined, {maximumFractionDigits:2}) + " " + to;
+                document.getElementById('currInputLabel').innerText = amount.toLocaleString() + " " + from;
+                
+                // 정보바 텍스트 업데이트 (탭 안에 있으므로 환율 모드일 때만 갱신/노출)
+                const now = new Date();
+                document.getElementById('infoBar').innerHTML = 
+                    `업데이트: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}<br>1 ${from} = ${rate.toFixed(2)} ${to}`;
+            } catch (e) {
+                document.getElementById('resultLabel').innerText = "연결 오류";
+            }
+        }
+
+        // 초기 실행
+        setInterval(() => { if(currentMode === 'currency') convert(); }, 60000); // 1분마다 갱신
+    </script>
+</body>
+</html>
