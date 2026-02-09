@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Premium Multi-Piano</title>
+    <title>Premium Piano UI</title>
     <style>
         :root {
             --primary-color: #00d4ff;
             --bg-color: #0f172a;
-            --btn-bg: #1e293b;
+            --key-gap-color: #000; /* 건반 사이 일정한 검은 간격 */
         }
 
         body {
@@ -17,83 +17,96 @@
             font-family: 'Pretendard', sans-serif; overflow: hidden; touch-action: manipulation;
         }
 
-        /* 상단 여백 대폭 축소 */
-        .header { text-align: center; margin-bottom: 15px; margin-top: -20px; }
-        h1 {
-            font-size: 1.8rem; color: #fff; letter-spacing: 3px; margin: 0;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-        }
+        .header { text-align: center; margin-bottom: 20px; }
+        h1 { font-size: 1.6rem; color: #fff; letter-spacing: 3px; margin: 0; opacity: 0.9; }
 
-        /* 직관적인 버튼 그룹 UI */
         .instrument-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: flex; gap: 8px; margin-bottom: 25px; justify-content: center;
         }
 
         .inst-btn {
-            padding: 8px 16px;
-            background: var(--btn-bg);
-            border: 1px solid #334155;
-            color: #94a3b8;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-            font-weight: 600;
+            padding: 8px 16px; background: #1e293b; border: 1px solid #334155;
+            color: #94a3b8; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
         }
 
-        .inst-btn:hover { color: #fff; border-color: var(--primary-color); }
+        .inst-btn.active { background: var(--primary-color); color: #000; border-color: var(--primary-color); font-weight: bold; }
 
-        .inst-btn.active {
-            background: var(--primary-color);
-            color: #000;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
-        }
-
-        /* 피아노 디자인 */
+        /* 피아노 본체 및 컨테이너 */
         .piano-wrapper {
-            background: #000; padding: 35px 15px 15px 15px; border-radius: 12px;
-            box-shadow: 0 40px 80px rgba(0,0,0,0.8); display: flex;
+            background: #000; padding: 40px 15px 15px 15px; border-radius: 10px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.7); position: relative;
+        }
+
+        .piano-container { 
+            display: flex; 
             position: relative;
+            background: var(--key-gap-color); /* 일정한 간격을 만드는 배경색 */
+            padding: 0; 
+            border: 1px solid var(--key-gap-color);
         }
 
-        .piano-wrapper::before {
-            content: "GEMINI DIGITAL"; position: absolute; top: 10px; left: 50%;
-            transform: translateX(-50%); color: #333; font-size: 10px; letter-spacing: 2px;
+        .key { 
+            position: relative; 
+            cursor: pointer; 
+            user-select: none; 
+            box-sizing: border-box; /* 테두리를 너비에 포함시켜 간격 일정 유지 */
         }
 
-        .piano-container { display: flex; }
-        .key { cursor: pointer; user-select: none; transition: all 0.08s ease; }
-
+        /* 흰 건반: 간격을 위해 오른쪽 보더 추가 */
         .white {
-            width: 55px; height: 200px; background: linear-gradient(to bottom, #fff 0%, #e2e8f0 100%);
-            border: 1px solid #cbd5e1; border-radius: 0 0 5px 5px; z-index: 1;
+            width: 60px; height: 230px;
+            background: linear-gradient(to bottom, #fff 0%, #f3f4f6 100%);
+            border-right: 2px solid var(--key-gap-color); /* 흰 건반 사이의 일정한 간격 */
+            border-radius: 0 0 5px 5px;
+            z-index: 1;
         }
+        
+        /* 마지막 흰 건반은 보더 제거 */
+        .white:last-child { border-right: none; }
 
+        /* 검은 건반: 흰 건반 위로 정확히 배치 */
         .black {
-            width: 34px; height: 125px; background: linear-gradient(to bottom, #1e293b 0%, #020617 100%);
-            margin-left: -17px; margin-right: -17px; z-index: 2;
-            border-radius: 0 0 4px 4px; border: 1px solid #000;
+            width: 36px; height: 140px;
+            background: linear-gradient(to bottom, #333 0%, #000 100%);
+            margin-left: -18px; margin-right: -18px;
+            z-index: 5;
+            border-radius: 0 0 4px 4px;
+            border: 1px solid #000;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
         }
 
-        /* 연주 중인 건반 */
-        .key.active {
+        /* 흰 건반만 눌리는 효과 (독립적 색상 변경) */
+        .white.active {
             background: var(--primary-color) !important;
-            transform: translateY(4px);
-            box-shadow: 0 5px 20px var(--primary-color);
+            border-right-color: var(--key-gap-color); /* 눌려도 간격은 유지 */
+            transform: none; /* 위치 이동 없이 색상만 변경 */
+        }
+
+        /* 검은 건반 눌리는 효과 */
+        .black.active {
+            background: #0088cc !important; /* 검은 건반은 조금 더 진한 블루 */
+            border-color: #000;
+        }
+
+        /* 📱 모바일 세로 모드 최적화 */
+        @media (max-orientation: portrait) {
+            .piano-container { flex-direction: column; }
+            .white {
+                width: 85vw; height: 55px;
+                border-right: none;
+                border-bottom: 2px solid var(--key-gap-color); /* 세로 모드일 땐 아래쪽 간격 */
+                border-radius: 0 5px 5px 0;
+            }
+            .black {
+                width: 55vw; height: 34px;
+                margin-top: -17px; margin-bottom: -17px;
+                margin-left: 0;
+                border-radius: 0 4px 4px 0;
+            }
+            .piano-wrapper { padding: 15px 15px 15px 35px; }
         }
 
         .info { margin-top: 25px; color: #475569; font-size: 0.8rem; }
-
-        @media (max-width: 650px) {
-            .white { width: 38px; height: 160px; }
-            .black { width: 24px; height: 100px; margin-left: -12px; margin-right: -12px; }
-            .inst-btn { padding: 6px 12px; font-size: 0.8rem; }
-        }
     </style>
 </head>
 <body>
@@ -102,11 +115,11 @@
         <h1>GEMINI PIANO</h1>
     </div>
 
-    <div class="instrument-selector" id="selector">
+    <div class="instrument-selector">
         <button class="inst-btn active" data-type="triangle">Piano</button>
         <button class="inst-btn" data-type="sine">Flute</button>
-        <button class="inst-btn" data-type="square">Retro 8-bit</button>
-        <button class="inst-btn" data-type="sawtooth">Synth Lead</button>
+        <button class="inst-btn" data-type="square">Retro</button>
+        <button class="inst-btn" data-type="sawtooth">Synth</button>
     </div>
 
     <div class="piano-wrapper">
@@ -127,9 +140,7 @@
         </div>
     </div>
 
-    <div class="info">
-        PC: A W S E D F T G Y H U J K
-    </div>
+    <div class="info">PC Keyboard: A S D F G H J K</div>
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -141,11 +152,9 @@
             "Gs": 415.30, "A": 440.00, "As": 466.16, "B": 493.88, "C2": 523.25
         };
 
-        // 악기 버튼 클릭 이벤트
-        const buttons = document.querySelectorAll('.inst-btn');
-        buttons.forEach(btn => {
+        document.querySelectorAll('.inst-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                buttons.forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.inst-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentInstrument = btn.dataset.type;
             });
@@ -158,10 +167,7 @@
         keys.forEach(key => {
             keyMap[key.dataset.key] = key;
             ['mousedown', 'touchstart'].forEach(evt => {
-                key.addEventListener(evt, (e) => { 
-                    e.preventDefault(); 
-                    playNote(key); 
-                });
+                key.addEventListener(evt, (e) => { e.preventDefault(); playNote(key); });
             });
             ['mouseup', 'mouseleave', 'touchend'].forEach(evt => {
                 key.addEventListener(evt, () => stopNote(key));
@@ -195,10 +201,7 @@
                 keyElement.classList.remove('active');
                 const { osc, gain } = activeOscillators[note];
                 gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-                setTimeout(() => { 
-                    osc.stop(); 
-                    osc.disconnect(); 
-                }, 200);
+                setTimeout(() => { osc.stop(); osc.disconnect(); }, 200);
                 delete activeOscillators[note];
             }
         }
