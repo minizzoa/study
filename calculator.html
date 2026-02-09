@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compact 3D Multi-Calculator</title>
+    <title>Advanced Multi-Calculator</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -34,33 +34,29 @@
             color: #fff;
             margin: 8px 0 12px 0;
             display: flex;
-            align-items: center;
-            gap: 8px;
+            align-items: center; gap: 8px;
         }
 
-        /* 탭 버튼: 세로 사이즈 축소 */
         .tabs {
-            display: flex;
-            gap: 6px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
             margin-bottom: 10px;
             width: 100%;
             max-width: 360px;
         }
         .tab-btn {
-            flex: 1;
-            padding: 7px 0; /* 세로 사이즈 축소 */
+            padding: 8px 0;
             border: none;
             border-radius: 8px;
             background: #2a2a2a;
             color: #888;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: bold;
+            transition: 0.2s;
         }
-        .tab-btn.active {
-            background: var(--btn-op);
-            color: #000;
-        }
+        .tab-btn.active { background: var(--btn-op); color: #000; }
 
         .calculator-container {
             background: var(--calc-bg);
@@ -80,7 +76,7 @@
             border-radius: 12px;
             text-align: right;
             padding: 10px 15px;
-            font-size: 30px;
+            font-size: 24px;
             font-weight: bold;
             color: var(--lcd-color);
             box-shadow: inset 4px 4px 10px #000;
@@ -89,145 +85,130 @@
             margin-bottom: 10px;
         }
 
-        .mode-section { display: none; margin-bottom: 10px; }
-        .mode-section.active { display: block; }
+        .expandable-section {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease-out;
+            overflow: hidden;
+        }
+        .expandable-section.active { grid-template-rows: 1fr; margin-bottom: 10px; }
+        .section-content { min-height: 0; }
 
-        /* 환율 섹션: 여백 및 사이즈 축소 */
-        .currency-box {
+        .box-ui {
             background: #111;
-            padding: 8px;
-            border-radius: 10px;
+            padding: 10px;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-        }
-        .curr-row {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .curr-row select {
-            flex: 1;
-            background: #2a2a2a;
-            color: #fff;
-            border: none;
-            padding: 6px;
-            border-radius: 5px;
-            font-size: 12px;
-        }
-        .curr-res {
-            flex: 1;
-            background: #333;
-            color: var(--btn-op);
-            height: 36px; /* 높이 축소 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 5px;
-            font-size: 13px;
-            font-weight: bold;
-        }
-
-        /* 정보바: 한 줄 표현 */
-        .info-bar {
-            margin-top: 8px;
-            font-size: 10px;
-            color: #999;
-            text-align: center;
-            background: rgba(255,255,255,0.05);
-            padding: 4px;
-            border-radius: 5px;
-            white-space: nowrap; /* 한 줄 유지 */
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
         }
+        .row-ui { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+        select {
+            flex: 1; height: 34px; background: #2a2a2a; color: #fff;
+            border: none; padding: 0 5px; border-radius: 6px; font-size: 12px;
+        }
+        .res-ui {
+            flex: 1; background: #333; color: var(--btn-op); height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; font-size: 13px; font-weight: bold;
+        }
+
+        .info-bar-single {
+            font-size: 10px; color: #999; text-align: center;
+            background: rgba(255,255,255,0.05); padding: 5px;
+            border-radius: 6px; margin-top: 6px;
+        }
+
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
         button {
-            height: 52px;
-            border: none;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: 700;
-            cursor: pointer;
-            background: var(--btn-num);
-            color: #fff;
-            box-shadow: 3px 3px 6px #0a0a0a, -1px -1px 4px #3a3a3a;
+            height: 52px; border: none; border-radius: 12px;
+            font-size: 20px; font-weight: 700; cursor: pointer;
+            background: var(--btn-num); color: #fff; box-shadow: 3px 3px 6px #0a0a0a;
         }
-        button:active {
-            box-shadow: inset 2px 2px 5px #0a0a0a;
-            transform: scale(0.96);
-        }
-        .op { background: var(--btn-op); color: #000; font-size: 22px; }
-        .func { background: var(--btn-func); font-size: 16px; }
-        .sci { background: var(--btn-sci); color: #000; font-size: 14px; height: 38px; }
+        button:active { transform: scale(0.96); }
+        .op { background: var(--btn-op); color: #000; }
+        .func { background: var(--btn-func); font-size: 15px; }
+        .sci { background: var(--btn-sci); color: #000; font-size: 13px; height: 38px; }
     </style>
 </head>
 <body>
 
-    <h1 class="main-title">🔢 계산기</h1>
+    <h1 class="main-title">🔢 멀티 계산기</h1>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="setMode('standard')">일반</button>
-        <button class="tab-btn" onclick="setMode('scientific')">공학</button>
-        <button class="tab-btn" onclick="setMode('currency')">환율</button>
+        <button class="tab-btn active" onclick="setMode('standard', this)">일반</button>
+        <button class="tab-btn" onclick="setMode('scientific', this)">공학</button>
+        <button class="tab-btn" onclick="setMode('currency', this)">환율</button>
+        <button class="tab-btn" onclick="setMode('unit', this)">단위</button>
     </div>
 
     <div class="calculator-container">
         <input type="text" id="screen" class="display" value="0" readonly>
 
-        <div id="sci-panel" class="mode-section">
-            <div class="grid">
-                <button class="sci" onclick="input('Math.sin(')">sin</button>
-                <button class="sci" onclick="input('Math.cos(')">cos</button>
-                <button class="sci" onclick="input('Math.sqrt(')">√</button>
-                <button class="sci" onclick="input('**')">xʸ</button>
+        <div id="sci-container" class="expandable-section">
+            <div class="section-content">
+                <div class="grid" style="grid-template-rows: repeat(2, 1fr); margin-bottom: 5px;">
+                    <button class="sci" onclick="input('Math.sin(')">sin</button>
+                    <button class="sci" onclick="input('Math.cos(')">cos</button>
+                    <button class="sci" onclick="input('Math.tan(')">tan</button>
+                    <button class="sci" onclick="input('Math.PI')">π</button>
+                    <button class="sci" onclick="input('Math.sqrt(')">√</button>
+                    <button class="sci" onclick="input('Math.log10(')">log</button>
+                    <button class="sci" onclick="input('Math.log(')">ln</button>
+                    <button class="sci" onclick="input('**')">xʸ</button>
+                </div>
             </div>
         </div>
 
-        <div id="cur-panel" class="mode-section">
-            <div class="currency-box">
-                <div class="curr-row">
-                    <select id="fromCurr" onchange="convert()">
-                        <option value="KRW">KRW 한국</option>
-                        <option value="USD">USD 미국</option>
-                        <option value="JPY">JPY 일본</option>
-                        <option value="EUR">EUR 유럽</option>
-                    </select>
-                    <button style="width:26px; height:26px; background:none; border:1px solid #444; color:#fff; border-radius:50%; cursor:pointer; font-size: 12px;" onclick="swapCurrencies()">⇄</button>
-                    <select id="toCurr" onchange="convert()">
-                        <option value="USD" selected>USD 미국</option>
-                        <option value="KRW">KRW 한국</option>
-                        <option value="JPY">JPY 일본</option>
-                        <option value="EUR">EUR 유럽</option>
-                    </select>
-                </div>
-                <div class="curr-row">
-                    <div class="curr-res" id="currInputLabel">0 KRW</div>
-                    <div class="curr-res" id="resultLabel">결과 대기</div>
+        <div id="cur-container" class="expandable-section">
+            <div class="section-content">
+                <div class="box-ui">
+                    <div class="row-ui">
+                        <select id="fromCurr" onchange="convertCurrency()"><option value="USD" selected>USD 미국</option><option value="KRW">KRW 한국</option></select>
+                        <span style="color:#fff">⇄</span>
+                        <select id="toCurr" onchange="convertCurrency()"><option value="KRW" selected>KRW 한국</option><option value="USD">USD 미국</option></select>
+                    </div>
+                    <div class="row-ui">
+                        <div class="res-ui" id="currInputLabel">0 USD</div>
+                        <div class="res-ui" id="currResultLabel">결과</div>
+                    </div>
+                    <div class="info-bar-single" id="curInfoBar">환율 정보 업데이트 중...</div>
                 </div>
             </div>
-            <div class="info-bar" id="infoBar">환율 정보 로딩 중...</div>
+        </div>
+
+        <div id="unit-container" class="expandable-section">
+            <div class="section-content">
+                <div class="box-ui">
+                    <div class="row-ui">
+                        <select id="unitType" onchange="updateUnitOptions()">
+                            <option value="length">길이 (Length)</option>
+                            <option value="weight">무게 (Weight)</option>
+                        </select>
+                    </div>
+                    <div class="row-ui">
+                        <select id="fromUnit" onchange="convertUnit()"></select>
+                        <span style="color:#fff">⇄</span>
+                        <select id="toUnit" onchange="convertUnit()"></select>
+                    </div>
+                    <div class="res-ui" id="unitResultLabel" style="width:100%">단위 변환 결과</div>
+                </div>
+            </div>
         </div>
 
         <div class="grid">
             <button class="func" onclick="clearAll()">AC</button>
             <button class="func" onclick="del()">DEL</button>
-            <button class="op" onclick="input('%')">%</button>
-            <button class="op" onclick="input('/')">÷</button>
+            <button class="op" onclick="input('(')">(</button><button class="op" onclick="input(')')">)</button>
             <button onclick="input('7')">7</button><button onclick="input('8')">8</button><button onclick="input('9')">9</button>
-            <button class="op" onclick="input('*')">×</button>
+            <button class="op" onclick="input('/')">÷</button>
             <button onclick="input('4')">4</button><button onclick="input('5')">5</button><button onclick="input('6')">6</button>
-            <button class="op" onclick="input('-')">-</button>
+            <button class="op" onclick="input('*')">×</button>
             <button onclick="input('1')">1</button><button onclick="input('2')">2</button><button onclick="input('3')">3</button>
+            <button class="op" onclick="input('-')">-</button>
+            <button style="grid-column: span 2;" onclick="input('0')">0</button><button onclick="input('.')">.</button>
             <button class="op" onclick="input('+')">+</button>
-            <button style="grid-column: span 2;" onclick="input('0')">0</button>
-            <button onclick="input('.')">.</button>
-            <button class="op" style="background:#fff; color:#000" onclick="exe()">=</button>
+            <button class="op" style="grid-column: span 4; background:#fff; color:#000" onclick="exe()">=</button>
         </div>
     </div>
 
@@ -235,40 +216,73 @@
         const screen = document.getElementById('screen');
         let currentMode = 'standard';
 
-        function setMode(m) {
+        const units = {
+            length: { m: 1, km: 1000, cm: 0.01, mm: 0.001, inch: 0.0254, ft: 0.3048 },
+            weight: { kg: 1, g: 0.001, mg: 0.000001, lb: 0.453592, oz: 0.0283495 }
+        };
+
+        function setMode(m, btn) {
             currentMode = m;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            document.getElementById('sci-panel').classList.toggle('active', m === 'scientific');
-            document.getElementById('cur-panel').classList.toggle('active', m === 'currency');
+            btn.classList.add('active');
+            document.getElementById('sci-container').classList.toggle('active', m === 'scientific');
+            document.getElementById('cur-container').classList.toggle('active', m === 'currency');
+            document.getElementById('unit-container').classList.toggle('active', m === 'unit');
+            if(m === 'unit') updateUnitOptions();
+            if(m === 'currency') convertCurrency();
             clearAll();
         }
 
         function input(v) {
-            if (screen.value === "0") screen.value = v;
+            if (screen.value === "0" && v !== '.') screen.value = v;
             else screen.value += v;
-            if(currentMode === 'currency') convert();
+            updateRealtime();
         }
 
-        function clearAll() { screen.value = "0"; if(currentMode === 'currency') convert(); }
-        function del() { screen.value = screen.value.slice(0, -1) || "0"; if(currentMode === 'currency') convert(); }
+        function updateRealtime() {
+            if(currentMode === 'currency') convertCurrency();
+            if(currentMode === 'unit') convertUnit();
+        }
+
+        function clearAll() { screen.value = "0"; updateRealtime(); }
+        function del() { screen.value = screen.value.slice(0, -1) || "0"; updateRealtime(); }
 
         function exe() {
             try {
-                let res = eval(screen.value.replace(/×/g, '*').replace(/÷/g, '/'));
-                screen.value = Number.isInteger(res) ? res : res.toFixed(3);
+                let expression = screen.value.replace(/×/g, '*').replace(/÷/g, '/');
+                // 괄호 자동 닫기 보정
+                const openCount = (expression.match(/\(/g) || []).length;
+                const closeCount = (expression.match(/\)/g) || []).length;
+                for(let i=0; i<openCount-closeCount; i++) expression += ')';
+                
+                let res = eval(expression);
+                screen.value = Number.isInteger(res) ? res : res.toFixed(4);
+                updateRealtime();
             } catch { screen.value = "Error"; }
         }
 
-        function swapCurrencies() {
-            const f = document.getElementById('fromCurr');
-            const t = document.getElementById('toCurr');
-            [f.value, t.value] = [t.value, f.value];
-            convert();
+        function updateUnitOptions() {
+            const type = document.getElementById('unitType').value;
+            const fromS = document.getElementById('fromUnit');
+            const toS = document.getElementById('toUnit');
+            fromS.innerHTML = toS.innerHTML = '';
+            Object.keys(units[type]).forEach(u => {
+                fromS.add(new Option(u, u));
+                toS.add(new Option(u, u));
+            });
+            convertUnit();
         }
 
-        async function convert() {
-            if(currentMode !== 'currency') return;
+        function convertUnit() {
+            const type = document.getElementById('unitType').value;
+            const from = document.getElementById('fromUnit').value;
+            const to = document.getElementById('toUnit').value;
+            const val = parseFloat(screen.value) || 0;
+            const res = (val * units[type][from]) / units[type][to];
+            document.getElementById('unitResultLabel').innerText = `${val} ${from} = ${res.toLocaleString(undefined,{maximumFractionDigits:4})} ${to}`;
+        }
+
+        async function convertCurrency() {
             const from = document.getElementById('fromCurr').value;
             const to = document.getElementById('toCurr').value;
             const amount = parseFloat(screen.value) || 0;
@@ -276,14 +290,11 @@
                 const res = await fetch(`https://open.er-api.com/v6/latest/${from}`);
                 const data = await res.json();
                 const rate = data.rates[to];
-                document.getElementById('resultLabel').innerText = (amount * rate).toLocaleString(undefined, {maximumFractionDigits:2}) + " " + to;
+                document.getElementById('currResultLabel').innerText = (amount * rate).toLocaleString(undefined, {maximumFractionDigits:2}) + " " + to;
                 document.getElementById('currInputLabel').innerText = amount.toLocaleString() + " " + from;
-                
                 const now = new Date();
-                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                // 정보바 한 줄로 표시
-                document.getElementById('infoBar').innerText = `${now.toLocaleDateString()} ${timeStr} | 1 ${from} = ${rate.toFixed(2)} ${to}`;
-            } catch (e) { document.getElementById('resultLabel').innerText = "오류"; }
+                document.getElementById('curInfoBar').innerText = `${now.toLocaleDateString()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')} | 1 ${from} = ${rate.toFixed(2)} ${to}`;
+            } catch (e) { }
         }
     </script>
 </body>
