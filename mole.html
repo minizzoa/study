@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>귀여운 두더지 잡기!</title>
+    <style>
+        body { text-align: center; font-family: 'Arial', sans-serif; background-color: #2c3e50; color: white; margin: 0; }
+        h1 { margin-top: 20px; color: #f1c40f; text-shadow: 2px 2px #000; }
+        
+        .score-board { font-size: 20px; margin-bottom: 10px; background: rgba(0,0,0,0.3); display: inline-block; padding: 10px 20px; border-radius: 15px; }
+        .high-score { color: #ff7675; font-weight: bold; }
+
+        .grid { 
+            display: grid; grid-template-columns: repeat(3, 130px); gap: 20px; 
+            justify-content: center; margin: 20px auto; width: fit-content;
+        }
+        .hole { 
+            width: 130px; height: 130px; background-color: #4e342e; border-radius: 50%; 
+            position: relative; overflow: hidden; border: 6px solid #3e2723; box-shadow: inset 0 15px 0 rgba(0,0,0,0.4);
+        }
+        
+        /* 두더지 캐릭터 설정 */
+        .mole { 
+            width: 100px; height: 110px; 
+            position: absolute; left: 15px; top: 130px; 
+            transition: top 0.1s ease-out; cursor: pointer;
+            
+            /* PNG 이미지를 사용하려면 아래 주석을 풀고 경로를 수정하세요 */
+            /* background: url('mole.png') no-repeat center/contain; */
+
+            /* CSS로 만든 두더지 얼굴 (이미지가 없을 때 대비) */
+            background-color: #a1887f; 
+            border-radius: 50% 50% 10% 10%;
+        }
+
+        /* 두더지 눈코입 (CSS 디자인) */
+        .mole::before { /* 눈 */
+            content: '● ●'; color: #2d3436; font-size: 12px;
+            position: absolute; top: 25px; left: 28px; letter-spacing: 12px;
+        }
+        .mole::after { /* 코와 입 */
+            content: '▿'; color: #ff7675; font-size: 20px; font-weight: bold;
+            position: absolute; top: 35px; left: 42px;
+        }
+
+        .mole.up { top: 35px; }
+
+        /* 게임 오버 화면 */
+        #game-over {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+        }
+        
+        button { 
+            padding: 12px 30px; font-size: 18px; cursor: pointer; background: #27ae60; 
+            color: white; border: none; border-radius: 25px; font-weight: bold;
+        }
+        button:hover { background: #2ecc71; }
+    </style>
+</head>
+<body>
+
+    <h1>🔨 두더지 대소동!</h1>
+    <div class="score-board">
+        점수: <span id="score">0</span> | 시간: <span id="time">20</span>s<br>
+        <span class="high-score">🏆 BEST: <span id="high-score">0</span></span>
+    </div>
+    <br>
+    <button onclick="startGame()">START GAME</button>
+
+    <div class="grid" id="grid"></div>
+
+    <div id="game-over">
+        <h2 style="font-size: 60px; color: #f1c40f;">TIME UP!</h2>
+        <p id="final-result" style="font-size: 28px;"></p>
+        <button onclick="closeGameOver()">RETRY</button>
+    </div>
+
+    <script>
+        const grid = document.querySelector('#grid');
+        const scoreBoard = document.querySelector('#score');
+        const timeBoard = document.querySelector('#time');
+        const highScoreBoard = document.querySelector('#high-score');
+        const gameOverScreen = document.querySelector('#game-over');
+        const finalResultText = document.querySelector('#final-result');
+
+        let score = 0;
+        let timeLeft = 20;
+        let isPlaying = false;
+        let highScore = localStorage.getItem('moleHighScore') || 0;
+        highScoreBoard.innerText = highScore;
+
+        // 구멍 생성
+        for (let i = 0; i < 9; i++) {
+            const hole = document.createElement('div');
+            hole.classList.add('hole');
+            hole.innerHTML = `<div class="mole"></div>`;
+            grid.appendChild(hole);
+        }
+
+        const moles = document.querySelectorAll('.mole');
+
+        function playHitSound() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, context.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, context.currentTime + 0.1);
+            gain.gain.fadeOut = 0.1;
+            osc.connect(gain); gain.connect(context.destination);
+            osc.start(); osc.stop(context.currentTime + 0.1);
+        }
+
+        function startGame() {
+            if (isPlaying) return;
+            score = 0; timeLeft = 20;
+            scoreBoard.innerText = score;
+            timeBoard.innerText = timeLeft;
+            isPlaying = true;
+            gameOverScreen.style.display = 'none';
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                timeBoard.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame();
+                }
+            }, 1000);
+            showMole();
+        }
+
+        function showMole() {
+            if (!isPlaying) return;
+            const randomIdx = Math.floor(Math.random() * moles.length);
+            const mole = moles[randomIdx];
+            
+            mole.classList.add('up');
+            const displayTime = Math.random() * 700 + 300; 
+            
+            setTimeout(() => {
+                mole.classList.remove('up');
+                if (isPlaying) showMole();
+            }, displayTime);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('moleHighScore', highScore);
+                highScoreBoard.innerText = highScore;
+            }
+            finalResultText.innerText = `당신의 점수: ${score}점`;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function closeGameOver() {
+            gameOverScreen.style.display = 'none';
+            startGame();
+        }
+
+        moles.forEach(mole => {
+            mole.addEventListener('mousedown', () => {
+                if (mole.classList.contains('up')) {
+                    score++;
+                    scoreBoard.innerText = score;
+                    mole.classList.remove('up');
+                    playHitSound();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
