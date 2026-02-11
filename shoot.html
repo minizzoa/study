@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BOSS RAID - Counter Attack</title>
+    <title>BOSS RAID - Power Up Edition</title>
     <style>
         body { margin: 0; background: #050507; color: white; font-family: 'Pretendard', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
         #game-header { margin-top: 15px; }
         #game-header h1 { font-size: 2rem; margin: 0; color: #ff3e3e; text-shadow: 0 0 15px #ff3e3e; }
-        #game-container { position: relative; width: 95vw; max-width: 450px; height: 75vh; max-height: 650px; background: #000; border: 3px solid #444; border-radius: 15px; margin-top: 10px; overflow: hidden; }
+        #game-container { position: relative; width: 95vw; max-width: 450px; height: 70vh; max-height: 600px; background: #000; border: 3px solid #444; border-radius: 15px; margin-top: 10px; overflow: hidden; }
         canvas { width: 100%; height: 100%; display: block; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; box-sizing: border-box; }
         .stats-row { display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
         #damage-flash { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,0,0,0); pointer-events: none; transition: background 0.1s; }
         .boss-warning { position: absolute; top: 35%; width: 100%; text-align: center; color: #ff0000; font-size: 2.2rem; font-weight: bold; display: none; animation: blink 0.5s infinite; }
         @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto; text-align: center; background: rgba(0,0,0,0.9); padding: 30px; border-radius: 20px; width: 85%; border: 2px solid #ff3e3e; }
+        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto; text-align: center; background: rgba(0,0,0,0.9); padding: 30px; border-radius: 20px; width: 85%; border: 2px solid #ff3e3e; z-index: 10; }
         button { background: #ff3e3e; border: none; padding: 12px 25px; font-size: 1.1rem; font-weight: bold; color: white; border-radius: 50px; cursor: pointer; margin: 10px; }
-        .bottom-controls { position: absolute; bottom: 15px; width: calc(100% - 30px); display: flex; justify-content: space-between; pointer-events: auto; }
-        .ctrl-btn { background: rgba(255,255,255,0.1); font-size: 0.8rem; padding: 6px 15px; color: #aaa; border-radius: 5px; border: 1px solid #444; }
+        .bottom-controls { width: 95vw; max-width: 450px; display: flex; justify-content: center; gap: 20px; padding: 15px 0; background: #050507; }
+        .ctrl-btn { background: #222; font-size: 0.9rem; padding: 10px 20px; color: #ccc; border-radius: 10px; border: 1px solid #444; pointer-events: auto; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -37,14 +37,7 @@
                 <span>SCORE: <span id="score" style="color:#0cf">0</span></span>
                 <span>TIME: <span id="time" style="color:#ff0">0</span>s</span>
             </div>
-            
             <div id="bossWarning" class="boss-warning">WARNING: BOSS EVOLVING!</div>
-
-            <div class="bottom-controls">
-                <button class="ctrl-btn" id="soundBtn" onclick="toggleSound()">🔊 Sound ON</button>
-                <button class="ctrl-btn" onclick="togglePause()">|| 일시정지</button>
-            </div>
-
             <div id="menu">
                 <h2 id="menuTitle" style="color:#ff3e3e;">READY?</h2>
                 <div id="scoreBoard" style="margin-bottom: 15px; line-height: 1.6;">
@@ -54,6 +47,11 @@
                 <button id="startBtn" onclick="startGame()">전투 시작</button>
             </div>
         </div>
+    </div>
+
+    <div class="bottom-controls">
+        <button class="ctrl-btn" id="soundBtn" onclick="toggleSound()">🔊 Sound ON</button>
+        <button class="ctrl-btn" onclick="togglePause()">|| 일시정지</button>
     </div>
 
 <script>
@@ -75,7 +73,8 @@ const soldierImg = new Image(); soldierImg.src = 'soldier.png';
 const badImg = new Image(); badImg.src = 'bad.png';
 const bossImg = new Image(); bossImg.src = 'boss.png';
 
-let player = { x: 225, y: 580, size: 25, weaponLv: 1, lives: 5, invul: 0 };
+// bulletSize 초기값 6 설정
+let player = { x: 225, y: 580, size: 35, weaponLv: 1, bulletSize: 6, lives: 5, invul: 0 };
 let bullets = [], enemyBullets = [], enemies = [], items = [], bosses = [];
 let isPaused = true, isSoundOn = true;
 let startTime = 0, elapsedTime = 0, frameCount = 0;
@@ -86,11 +85,12 @@ let isBossSummoned = false;
 const BOSS_TRIGGER_SCORE = 1000; 
 hiScoreDisplay.innerText = hiScore;
 
+// 무기 데이터 (색상 및 속도 위주)
 const weaponData = {
-    1: { damage: 1, color: '#fff', size: 4, speed: 10, fireRate: 15 },
-    2: { damage: 2, color: '#0f0', size: 8, speed: 12, fireRate: 12 },
-    3: { damage: 5, color: '#0cf', size: 16, speed: 15, fireRate: 8 },
-    4: { damage: 20, color: '#f0f', size: 35, speed: 20, fireRate: 6 }
+    1: { damage: 1, color: '#fff', speed: 10, fireRate: 15 },
+    2: { damage: 2, color: '#0f0', speed: 12, fireRate: 12 },
+    3: { damage: 5, color: '#0cf', speed: 15, fireRate: 8 },
+    4: { damage: 20, color: '#ffcc00', speed: 20, fireRate: 6 }
 };
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -131,14 +131,12 @@ function startGame() {
 function togglePause() {
     isPaused = !isPaused;
     menu.style.display = isPaused ? 'block' : 'none';
-    if (isPaused) {
-        menuTitle.innerText = "일시정지";
-        document.getElementById('bestScoreText').innerText = `최고 기록: ${hiScore}`;
-    } else requestAnimationFrame(loop);
+    if (isPaused) menuTitle.innerText = "일시정지";
+    else requestAnimationFrame(loop);
 }
 
 function resetGame() {
-    player = { x: 225, y: 580, size: 25, weaponLv: 1, lives: 5, invul: 0 };
+    player = { x: 225, y: 580, size: 35, weaponLv: 1, bulletSize: 6, lives: 5, invul: 0 };
     bullets = []; enemyBullets = []; enemies = []; items = []; bosses = [];
     score = 0; bossKillCount = 0; isBossSummoned = false;
     elapsedTime = 0; frameCount = 0; startTime = Date.now();
@@ -148,7 +146,7 @@ function resetGame() {
 function playerHit() {
     if (player.invul > 0) return;
     player.lives--;
-    player.invul = 60; // 약 1초 무적
+    player.invul = 90; 
     triggerFlash();
     playSound(100, 'sine', 0.5, 0.2);
     if (player.lives <= 0) gameOver();
@@ -178,18 +176,17 @@ function update() {
     updateUI();
 
     const isBossActive = bosses.length > 0;
-    const spawnRate = isBossActive ? 50 : Math.max(5, 35 - Math.floor(elapsedTime / 8)); 
+    const spawnRate = isBossActive ? 60 : Math.max(10, 45 - Math.floor(elapsedTime / 10)); 
     
     if (frameCount % spawnRate === 0) {
         enemies.push({ 
             x: Math.random() * (canvas.width - 40) + 20, y: -40, 
-            hp: 2 + Math.floor(elapsedTime / 15),
-            size: 20 + Math.random() * 10, speed: 2 + (elapsedTime / 50),
+            hp: 2 + Math.floor(elapsedTime / 20),
+            size: 20 + Math.random() * 10, speed: 2 + (elapsedTime / 65),
             lastShot: frameCount
         });
     }
 
-    // --- 보스 소환 ---
     if (!isBossActive && score >= (bossKillCount + 1) * BOSS_TRIGGER_SCORE && !isBossSummoned) {
         isBossSummoned = true;
         bossWarning.style.display = 'block';
@@ -199,8 +196,8 @@ function update() {
             const evolveFactor = bossKillCount;
             bosses.push({
                 x: canvas.width / 2, y: -150, 
-                size: Math.min(150, 90 + evolveFactor * 10),
-                hp: 500 + (evolveFactor * 400), maxHp: 500 + (evolveFactor * 400),
+                size: Math.min(150, 70 + evolveFactor * 15),
+                hp: 400 + (evolveFactor * 400), maxHp: 400 + (evolveFactor * 400),
                 speed: 0.7 + (evolveFactor * 0.2),
                 lastShot: frameCount
             });
@@ -208,32 +205,31 @@ function update() {
         }, 3000);
     }
 
-    // 플레이어 발사
     const wp = weaponData[player.weaponLv];
     if (frameCount % wp.fireRate === 0) {
-        bullets.push({ x: player.x, y: player.y - 25, ...wp });
+        // player.bulletSize를 사용하여 생성
+        bullets.push({ x: player.x, y: player.y - 35, ...wp, size: player.bulletSize });
         playSound(700, 'sine', 0.08, 0.02);
     }
 
-    // 적군 발사 로직
     enemies.forEach(e => {
-        if (frameCount - e.lastShot > 100) { // 일반 적은 약 1.6초마다 발사
-            enemyBullets.push({ x: e.x, y: e.y + 10, speed: 4, size: 5, color: '#f00' });
+        // 적 총알 생성 빈도 상향 (기존 200 -> 120)
+        if (frameCount - e.lastShot > 120) { 
+            enemyBullets.push({ x: e.x, y: e.y + 10, speed: 3.5, size: 5, color: '#f00', vx: 0 });
             e.lastShot = frameCount;
         }
     });
 
-    // 보스 발사 로직 (탄막 스타일)
     bosses.forEach(b => {
-        if (frameCount % 60 === 0) { // 1초마다 여러 갈래 발사
+        // 보스 공격 빈도 상향 (기존 100 -> 60)
+        if (frameCount % 60 === 0) { 
             for(let i=-2; i<=2; i++) {
-                enemyBullets.push({ x: b.x + (i*20), y: b.y + b.size/2, speed: 5, size: 8, color: '#ff0', vx: i*1 });
+                enemyBullets.push({ x: b.x + (i*15), y: b.y + b.size/2, speed: 4, size: 7, color: '#f0f', vx: i*0.8 });
             }
             playSound(150, 'square', 0.2, 0.05);
         }
     });
 
-    // 플레이어 총알 처리
     bullets.forEach((b, bi) => {
         b.y -= b.speed;
         bosses.forEach((boss, bsi) => {
@@ -255,18 +251,17 @@ function update() {
                 bullets.splice(bi, 1);
                 if (e.hp <= 0) {
                     score += 100;
-                    if (Math.random() > 0.9) items.push({ x: e.x, y: e.y, lv: player.weaponLv + 1 });
+                    if (Math.random() > 0.85) items.push({ x: e.x, y: e.y, lv: player.weaponLv + 1 });
                     enemies.splice(ei, 1);
                 }
             }
         });
     });
 
-    // 적군 총알 처리 (플레이어 피격)
     enemyBullets.forEach((eb, ebi) => {
         eb.y += eb.speed;
         if (eb.vx) eb.x += eb.vx;
-        if (Math.hypot(player.x - eb.x, player.y - eb.y) < player.size + eb.size) {
+        if (Math.hypot(player.x - eb.x, player.y - eb.y) < (player.size * 0.75) + eb.size) {
             enemyBullets.splice(ebi, 1);
             playerHit();
         }
@@ -279,6 +274,10 @@ function update() {
 
     enemies.forEach((e, ei) => {
         e.y += e.speed;
+        if (Math.hypot(player.x - e.x, player.y - e.y) < (player.size * 0.8) + e.size) {
+            enemies.splice(ei, 1);
+            playerHit();
+        }
         if (e.y > canvas.height + e.size) {
             enemies.splice(ei, 1);
             playerHit();
@@ -286,10 +285,13 @@ function update() {
     });
 
     items.forEach((item, ii) => {
-        item.y += 2.5;
-        if (Math.hypot(player.x - item.x, player.y - item.y) < 35) {
+        item.y += 2.2;
+        if (Math.hypot(player.x - item.x, player.y - item.y) < player.size + 15) {
+            // 아이템 획득 시 무기 레벨업 및 총알 크기 1.5배 증가
             player.weaponLv = Math.min(4, item.lv);
+            player.bulletSize = Math.min(150, player.bulletSize * 1.5); // 최대 크기 제한 150
             items.splice(ii, 1);
+            playSound(900, 'sine', 0.2, 0.1);
         }
     });
 
@@ -308,41 +310,45 @@ function gameOver() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 보스 그리기
     bosses.forEach(b => {
         if (bossImg.complete) ctx.drawImage(bossImg, b.x - b.size, b.y - b.size, b.size * 2, b.size * 2);
-        ctx.fillStyle = '#222'; ctx.fillRect(b.x - 80, b.y - b.size - 25, 160, 10);
-        ctx.fillStyle = '#f00'; ctx.fillRect(b.x - 80, b.y - b.size - 25, (b.hp/b.maxHp) * 160, 10);
+        ctx.fillStyle = '#222'; ctx.fillRect(b.x - 60, b.y - b.size - 25, 120, 8);
+        ctx.fillStyle = '#f00'; ctx.fillRect(b.x - 60, b.y - b.size - 25, (b.hp/b.maxHp) * 120, 8);
     });
 
-    // 플레이어 (무적 상태 시 깜빡임)
-    if (!(player.invul > 0 && frameCount % 4 < 2)) {
+    if (!(player.invul > 0 && frameCount % 6 < 3)) {
         if (soldierImg.complete) {
-            const drawSize = player.size * 2.8; 
+            const drawSize = player.size * 2.5; 
             ctx.drawImage(soldierImg, player.x - drawSize/2, player.y - drawSize/2, drawSize, drawSize);
         }
     }
 
-    // 적군
     enemies.forEach(e => {
         if (badImg.complete) ctx.drawImage(badImg, e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
     });
 
-    // 총알
     bullets.forEach(b => {
         ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill();
     });
 
-    // 적군 총알 (붉은색/노란색 레이저)
     enemyBullets.forEach(eb => {
+        ctx.shadowBlur = 8; ctx.shadowColor = eb.color;
         ctx.fillStyle = eb.color;
-        ctx.shadowBlur = 10; ctx.shadowColor = eb.color;
         ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.size, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
     });
-    ctx.shadowBlur = 0;
 
     items.forEach(item => {
-        ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(item.x, item.y, 14, 0, Math.PI * 2); ctx.fill();
+        const itemRadius = 20;
+        ctx.shadowBlur = 15; ctx.shadowColor = '#ff0';
+        ctx.fillStyle = '#ff0';
+        ctx.beginPath(); ctx.arc(item.x, item.y, itemRadius, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("P", item.x, item.y);
     });
 }
 
