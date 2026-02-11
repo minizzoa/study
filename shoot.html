@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BOSS RAID - Evolution</title>
+    <style>
+        body { margin: 0; background: #050507; color: white; font-family: 'Pretendard', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
+        #game-header { margin-top: 15px; }
+        #game-header h1 { font-size: 2rem; margin: 0; color: #ff3e3e; text-shadow: 0 0 15px #ff3e3e; }
+        #game-container { position: relative; width: 95vw; max-width: 450px; height: 75vh; max-height: 650px; background: #000; border: 3px solid #444; border-radius: 15px; margin-top: 10px; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; box-sizing: border-box; }
+        .stats-row { display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
+        #damage-flash { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,0,0,0); pointer-events: none; transition: background 0.1s; }
+        .boss-warning { position: absolute; top: 35%; width: 100%; text-align: center; color: #ff0000; font-size: 2.2rem; font-weight: bold; display: none; animation: blink 0.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto; text-align: center; background: rgba(0,0,0,0.9); padding: 30px; border-radius: 20px; width: 80%; border: 2px solid #ff3e3e; }
+        button { background: #ff3e3e; border: none; padding: 12px 25px; font-size: 1.1rem; font-weight: bold; color: white; border-radius: 50px; cursor: pointer; margin: 10px; }
+        .bottom-controls { position: absolute; bottom: 15px; width: calc(100% - 30px); display: flex; justify-content: space-between; pointer-events: auto; }
+        .ctrl-btn { background: rgba(255,255,255,0.1); font-size: 0.8rem; padding: 6px 15px; color: #aaa; border-radius: 5px; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+
+    <div id="game-header"><h1>BOSS RAID</h1></div>
+
+    <div id="game-container">
+        <div id="damage-flash"></div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <div class="stats-row">
+                <span>SCORE: <span id="score" style="color:#0cf">0</span></span>
+                <span id="lifeDisplay" style="color:#f44; letter-spacing: 2px;">❤️❤️❤️❤️❤️</span>
+            </div>
+            <div class="stats-row">
+                <span>LEVEL: <span id="lv" style="color:#0cf">1</span></span>
+                <span>TIME: <span id="time" style="color:#ff0">0</span>s</span>
+            </div>
+            
+            <div id="bossWarning" class="boss-warning">BOSS APPROACHING!</div>
+
+            <div class="bottom-controls">
+                <button class="ctrl-btn" id="soundBtn" onclick="toggleSound()">🔊 Sound ON</button>
+                <button class="ctrl-btn" onclick="togglePause()">|| 일시정지</button>
+            </div>
+
+            <div id="menu">
+                <h2 id="menuTitle" style="color:#ff3e3e;">READY?</h2>
+                <p id="menuScoreText"></p>
+                <button id="startBtn" onclick="startGame()">전투 시작</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const lvDisplay = document.getElementById('lv');
+const scoreDisplay = document.getElementById('score');
+const timeDisplay = document.getElementById('time');
+const lifeDisplay = document.getElementById('lifeDisplay');
+const menu = document.getElementById('menu');
+const menuTitle = document.getElementById('menuTitle');
+const bossWarning = document.getElementById('bossWarning');
+const flash = document.getElementById('damage-flash');
+
+canvas.width = 450;
+canvas.height = 650;
+
+// --- 모든 이미지 에셋 로드 ---
+const soldierImg = new Image(); soldierImg.src = 'soldier.png';
+const badImg = new Image(); badImg.src = 'bad.png';
+const bossImg = new Image(); bossImg.src = 'boss.png';
+
+let player = { x: 225, y: 580, size: 25, weaponLv: 1, lives: 5 };
+let bullets = [], enemies = [], items = [], bosses = [];
+let isPaused = true, isSoundOn = true;
+let startTime = 0, elapsedTime = 0, frameCount = 0;
+let score = 0;
+let bossKillCount = 0;
+let isBossSummoned = false;
+
+const BOSS_TRIGGER_SCORE = 1000; // 보스가 나타나는 점수 기준 (예: 1000점마다)
+
+const weaponData = {
+    1: { damage: 1, color: '#fff', size: 4, speed: 10, fireRate: 15 },
+    2: { damage: 2, color: '#0f0', size: 8, speed: 12, fireRate: 12 },
+    3: { damage: 5, color: '#0cf', size: 16, speed: 15, fireRate: 8 },
+    4: { damage: 18, color: '#f0f', size: 35, speed: 20, fireRate: 6 }
+};
+
+// --- 오디오 엔진 ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(f, t, d, v) {
+    if (!isSoundOn) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+    g.gain.setValueAtTime(v, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + d);
+}
+
+function toggleSound() {
+    isSoundOn = !isSoundOn;
+    document.getElementById('soundBtn').innerText = isSoundOn ? "🔊 Sound ON" : "🔇 Sound OFF";
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+const handleInput = (e) => {
+    if (isPaused) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const scaleX = canvas.width / rect.width;
+    player.x = Math.max(player.size, Math.min(canvas.width - player.size, (clientX - rect.left) * scaleX));
+};
+window.addEventListener('mousemove', handleInput);
+window.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); }, { passive: false });
+
+function startGame() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    isPaused = false; menu.style.display = 'none';
+    if(player.lives <= 0 || elapsedTime === 0) resetGame();
+    requestAnimationFrame(loop);
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    menu.style.display = isPaused ? 'block' : 'none';
+    if (isPaused) menuTitle.innerText = "일시정지";
+    else requestAnimationFrame(loop);
+}
+
+function resetGame() {
+    player = { x: 225, y: 580, size: 25, weaponLv: 1, lives: 5 };
+    bullets = []; enemies = []; items = []; bosses = [];
+    score = 0; bossKillCount = 0; isBossSummoned = false;
+    elapsedTime = 0; frameCount = 0; startTime = Date.now();
+    updateUI();
+}
+
+function triggerFlash() {
+    flash.style.background = "rgba(255, 0, 0, 0.4)";
+    setTimeout(() => flash.style.background = "rgba(255, 0, 0, 0)", 100);
+}
+
+function updateUI() {
+    lvDisplay.innerText = player.weaponLv;
+    scoreDisplay.innerText = score;
+    timeDisplay.innerText = elapsedTime;
+    lifeDisplay.innerText = "❤️".repeat(Math.max(0, player.lives));
+}
+
+function update() {
+    if (isPaused) return;
+    frameCount++;
+    elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+    updateUI();
+
+    // 보스가 없을 때만 일반 적군 생성 속도가 빨라짐
+    const isBossActive = bosses.length > 0;
+    const spawnRate = isBossActive ? 30 : Math.max(2, 35 - Math.floor(elapsedTime / 4)); 
+    
+    if (frameCount % spawnRate === 0) {
+        enemies.push({ 
+            x: Math.random() * (canvas.width - 40) + 20, y: -40, 
+            hp: 2 + Math.floor(elapsedTime / 15), maxHp: 2 + Math.floor(elapsedTime / 15),
+            size: 20 + Math.random() * 10, speed: 2 + (elapsedTime / 45)
+        });
+    }
+
+    // --- 특정 점수 도달 시 보스 소환 ---
+    // 보스가 없고, 현재 점수가 (보스처치수 + 1) * 기준점수보다 높을 때
+    if (!isBossActive && score >= (bossKillCount + 1) * BOSS_TRIGGER_SCORE && !isBossSummoned) {
+        isBossSummoned = true;
+        bossWarning.style.display = 'block';
+        playSound(80, 'square', 2, 0.2);
+        
+        setTimeout(() => {
+            bossWarning.style.display = 'none';
+            bosses.push({
+                x: canvas.width / 2, y: -150, size: 95,
+                hp: 300 + (bossKillCount * 200), maxHp: 300 + (bossKillCount * 200),
+                speed: 0.7
+            });
+            isBossSummoned = false;
+        }, 3000);
+    }
+
+    const wp = weaponData[player.weaponLv];
+    if (frameCount % wp.fireRate === 0) {
+        bullets.push({ x: player.x, y: player.y - 25, ...wp });
+        playSound(650, 'sine', 0.08, 0.02);
+    }
+
+    bullets.forEach((b, bi) => {
+        b.y -= b.speed;
+        
+        // 보스 충돌
+        bosses.forEach((boss, bsi) => {
+            if (Math.hypot(boss.x - b.x, boss.y - b.y) < boss.size) {
+                boss.hp -= b.damage;
+                bullets.splice(bi, 1);
+                playSound(150, 'triangle', 0.1, 0.05); // 보스 피격음
+                if (boss.hp <= 0) {
+                    score += 5000; // 보스 처치 대량 점수
+                    bossKillCount++;
+                    playSound(40, 'sawtooth', 1.5, 0.3);
+                    items.push({ x: boss.x, y: boss.y, lv: Math.min(4, player.weaponLv + 1) });
+                    bosses.splice(bsi, 1);
+                }
+            }
+        });
+
+        // 일반 적 충돌
+        enemies.forEach((e, ei) => {
+            if (Math.hypot(e.x - b.x, e.y - b.y) < e.size) {
+                e.hp -= b.damage;
+                bullets.splice(bi, 1);
+                if (e.hp <= 0) {
+                    score += 100; // 일반 적 처치 점수
+                    if (Math.random() > 0.92 && player.weaponLv < 4) items.push({ x: e.x, y: e.y, lv: player.weaponLv + 1 });
+                    enemies.splice(ei, 1);
+                }
+            }
+        });
+    });
+
+    bosses.forEach(b => {
+        if (b.y < 150) b.y += b.speed;
+        else b.x += Math.sin(frameCount / 50) * 4;
+    });
+
+    enemies.forEach((e, ei) => {
+        e.y += e.speed;
+        if (e.y > canvas.height + e.size) {
+            enemies.splice(ei, 1);
+            player.lives--;
+            triggerFlash();
+            playSound(100, 'sine', 0.5, 0.2);
+            if (player.lives <= 0) gameOver();
+        }
+    });
+
+    items.forEach((item, ii) => {
+        item.y += 2.5;
+        if (Math.hypot(player.x - item.x, player.y - item.y) < 35) {
+            playSound(900, 'sine', 0.3, 0.1);
+            player.weaponLv = item.lv;
+            items.splice(ii, 1);
+        }
+    });
+
+    bullets = bullets.filter(b => b.y > -50);
+}
+
+function gameOver() {
+    isPaused = true; 
+    menu.style.display = 'block';
+    menuTitle.innerText = "MISSION FAILED";
+    document.getElementById('menuScoreText').innerText = `최종 점수: ${score} | 생존: ${elapsedTime}초`;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // --- 보스 그리기 ---
+    bosses.forEach(b => {
+        if (bossImg.complete) {
+            ctx.drawImage(bossImg, b.x - b.size, b.y - b.size, b.size * 2, b.size * 2);
+        } else {
+            ctx.fillStyle = '#600'; ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI*2); ctx.fill();
+        }
+        // 보스 체력바 (상단 고정 스타일)
+        ctx.fillStyle = '#222'; ctx.fillRect(b.x - 80, b.y - b.size - 25, 160, 10);
+        ctx.fillStyle = '#f00'; ctx.fillRect(b.x - 80, b.y - b.size - 25, (b.hp/b.maxHp) * 160, 10);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(b.x - 80, b.y - b.size - 25, 160, 10);
+    });
+
+    // --- 플레이어 그리기 ---
+    if (soldierImg.complete) {
+        const drawSize = player.size * 2.8; 
+        ctx.drawImage(soldierImg, player.x - drawSize/2, player.y - drawSize/2, drawSize, drawSize);
+    } else {
+        ctx.fillStyle = '#0cf'; ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill();
+    }
+
+    // --- 적군 그리기 ---
+    enemies.forEach(e => {
+        if (badImg.complete) {
+            ctx.drawImage(badImg, e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
+        } else {
+            ctx.fillStyle = '#f44'; ctx.beginPath(); ctx.arc(e.x, e.y, e.size, 0, Math.PI*2); ctx.fill();
+        }
+    });
+
+    // --- 총알 & 아이템 ---
+    bullets.forEach(b => {
+        ctx.shadowBlur = 12; ctx.shadowColor = b.color;
+        ctx.fillStyle = b.color;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    items.forEach(item => {
+        ctx.fillStyle = '#ff0'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff0';
+        ctx.beginPath(); ctx.arc(item.x, item.y, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+        ctx.fillText("P", item.x, item.y+5);
+    });
+}
+
+function loop() {
+    if (!isPaused) { update(); draw(); requestAnimationFrame(loop); }
+}
+</script>
+</body>
+</html>
