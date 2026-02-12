@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ARMORY RAID - Reset Bug Fixed</title>
+    <style>
+        body { margin: 0; background: #050507; color: white; font-family: 'Pretendard', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
+        #game-header { margin-top: 10px; text-align: center; }
+        #game-header h1 { font-size: 1.5rem; margin: 0; color: #ff3e3e; text-shadow: 0 0 10px #ff3e3e; }
+        #game-container { position: relative; width: 95vw; max-width: 500px; height: 75vh; max-height: 650px; background: #000; border: 3px solid #444; border-radius: 10px; margin-top: 5px; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 12px; box-sizing: border-box; }
+        .stats-row { display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: bold; margin-bottom: 2px; }
+        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto; text-align: center; background: rgba(0,0,0,0.95); padding: 25px; border-radius: 15px; width: 85%; border: 2px solid #ff3e3e; z-index: 10; }
+        button.start-btn { background: #ff3e3e; border: none; padding: 12px 30px; font-size: 1.1rem; font-weight: bold; color: #fff; border-radius: 50px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .bottom-controls { width: 95vw; max-width: 500px; display: flex; justify-content: center; gap: 15px; padding: 15px 0; }
+        .ctrl-btn { background: #222; font-size: 0.85rem; padding: 8px 15px; color: #ccc; border-radius: 8px; border: 1px solid #444; cursor: pointer; }
+        .boss-warning { position: absolute; top: 30%; width: 100%; text-align: center; color: #ff0000; font-size: 2rem; font-weight: bold; display: none; animation: blink 0.4s infinite; z-index: 5; }
+        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="game-header"><h1>TACTICAL SIEGE</h1></div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <div class="stats-row">
+                <span>HI-SCORE: <span id="hiScore" style="color:#ff0">0</span></span>
+                <span id="lifeDisplay" style="color:#f44; letter-spacing: 2px;">❤️❤️❤️❤️❤️</span>
+            </div>
+            <div class="stats-row">
+                <span>SCORE: <span id="score" style="color:#0cf">0</span></span>
+                <span>TIME: <span id="time" style="color:#fff">0</span>s</span>
+            </div>
+            <div id="bossWarning" class="boss-warning">ELITE BOSS INCOMING!</div>
+            <div id="menu">
+                <h2 id="menuTitle" style="color:#ff3e3e;">ARMORY RAID</h2>
+                <p id="menuInfo">2,000점에 보스가 등장합니다!</p>
+                <p id="retryInfo" style="display:none; color:#aaa; font-size:0.9rem;">다시 도전하시겠습니까?</p>
+                <button class="start-btn" onclick="startGame()">전투 개시</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-controls">
+        <button class="ctrl-btn" id="soundBtn" onclick="toggleSound()">🔊 Sound ON</button>
+        <button class="ctrl-btn" onclick="togglePause()">|| 일시정지</button>
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('score');
+const hiScoreDisplay = document.getElementById('hiScore');
+const timeDisplay = document.getElementById('time');
+const lifeDisplay = document.getElementById('lifeDisplay');
+const menu = document.getElementById('menu');
+const menuTitle = document.getElementById('menuTitle');
+const menuInfo = document.getElementById('menuInfo');
+const retryInfo = document.getElementById('retryInfo');
+const bossWarning = document.getElementById('bossWarning');
+
+canvas.width = 500;
+canvas.height = 700;
+
+const soldierImg = new Image(); soldierImg.src = 'soldier.png';
+const badImg = new Image(); badImg.src = 'bad.png';
+const bossImg = new Image(); bossImg.src = 'boss.png';
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let isSoundOn = true;
+function playSound(f, t, d, v) {
+    if (!isSoundOn) return;
+    try {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+        g.gain.setValueAtTime(v, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + d);
+    } catch(e) {}
+}
+
+let player, bullets, enemies, items, walls, bosses;
+let isPaused = true, frameCount = 0, score = 0, startTime = 0, elapsedTime = 0;
+let hiScore = localStorage.getItem('swarmHiScore') || 0;
+let enemySpeed = 1.2; 
+let bossTriggered = false;
+let bossTimer = null; // [추정 원인 해결] 보스 생성 타이머 저장용
+
+hiScoreDisplay.innerText = hiScore;
+
+const weaponData = {
+    1: { damage: 1, color: '#00D2FF', speed: 11, fireRate: 18 },
+    2: { damage: 2, color: '#3AFF7E', speed: 13, fireRate: 15 },
+    3: { damage: 6, color: '#FFEB3B', speed: 15, fireRate: 12 },
+    4: { damage: 15, color: '#FF9100', speed: 17, fireRate: 10 },
+    5: { damage: 30, color: '#FF1744', speed: 19, fireRate: 8 },
+    6: { damage: 75, color: '#F800FF', speed: 23, fireRate: 5 }
+};
+
+function resetGame() {
+    // [버그 수정] 게임 리셋 시 기존에 예약된 보스 소환 타이머를 강제 취소
+    if (bossTimer) {
+        clearTimeout(bossTimer);
+        bossTimer = null;
+    }
+    
+    player = { x: 250, y: 640, size: 30, weaponLv: 1, bulletSize: 6, lives: 5 };
+    bullets = []; enemies = []; items = []; bosses = [];
+    score = 0; elapsedTime = 0; enemySpeed = 1.2; startTime = Date.now();
+    bossTriggered = false; frameCount = 0;
+    
+    initWalls(); 
+    spawnEnemyWave(); 
+    updateUI();
+    
+    retryInfo.style.display = 'none';
+    bossWarning.style.display = 'none';
+}
+
+function initWalls() {
+    walls = [];
+    for(let i=0; i<9; i++) {
+        walls.push({ x: 0, y: i * 55 + 60, w: 50, h: 25, hp: 2 });
+        walls.push({ x: canvas.width - 50, y: i * 55 + 60, w: 50, h: 25, hp: 2 });
+    }
+}
+
+function spawnEnemyWave() {
+    const rowCount = bossTriggered ? 8 : 6;
+    for(let row=0; row < rowCount; row++) {
+        for(let col=0; col<10; col++) {
+            enemies.push({ x: col * 40 + 70, y: row * 30 - 300, size: 15, hp: 4 });
+        }
+    }
+}
+
+function startGame() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!player || player.lives <= 0 || isPaused) {
+        resetGame();
+    }
+    isPaused = false;
+    menu.style.display = 'none';
+    requestAnimationFrame(loop);
+}
+
+function toggleSound() { isSoundOn = !isSoundOn; document.getElementById('soundBtn').innerText = isSoundOn ? "🔊 Sound ON" : "🔇 Sound OFF"; }
+function togglePause() { 
+    if (player && player.lives <= 0) return;
+    isPaused = !isPaused; 
+    menu.style.display = isPaused ? 'block' : 'none'; 
+    if (!isPaused) requestAnimationFrame(loop); 
+}
+
+function updateUI() {
+    scoreDisplay.innerText = score;
+    timeDisplay.innerText = elapsedTime;
+    lifeDisplay.innerText = "❤️".repeat(Math.max(0, player.lives));
+}
+
+function update() {
+    if (isPaused) return;
+    frameCount++;
+    elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+    updateUI();
+
+    // [버그 수정] 보스 등장 조건 정밀화
+    if (score >= 2000 && !bossTriggered) {
+        bossTriggered = true;
+        bossWarning.style.display = 'block';
+        playSound(50, 'square', 2.5, 0.4);
+        
+        // 타이머를 변수에 저장하여 resetGame 시 취소할 수 있게 함
+        bossTimer = setTimeout(() => { 
+            bossWarning.style.display = 'none'; 
+            if (!isPaused && bosses.length === 0) {
+                bosses.push({ x: canvas.width/2, y: -150, size: 110, hp: 8000, maxHp: 8000 }); 
+            }
+        }, 3000);
+    }
+
+    // 적 하단 도달 체크
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        e.y += enemySpeed;
+        if (e.y > player.y - 10) {
+            player.lives--;
+            enemies.splice(i, 1);
+            playSound(100, 'sawtooth', 0.3, 0.2);
+            if (player.lives <= 0) {
+                finishGame("GAME OVER", "#ff3e3e");
+                return; 
+            }
+        }
+    }
+
+    if (enemies.length === 0 && !isPaused) { 
+        enemySpeed += 0.15; 
+        spawnEnemyWave(); 
+    }
+
+    bosses.forEach(b => { 
+        if(b.y < 160) b.y += 0.5; 
+        else {
+            b.x += Math.sin(frameCount/30) * 4;
+            b.y += Math.cos(frameCount/60) * 0.5;
+        }
+    });
+
+    const wp = weaponData[player.weaponLv];
+    if (frameCount % wp.fireRate === 0) {
+        bullets.push({ x: player.x, y: player.y - 25, ...wp, size: player.bulletSize });
+        playSound(800, 'sine', 0.08, 0.02);
+    }
+
+    bullets.forEach((b, bi) => {
+        b.y -= b.speed;
+        walls.forEach((w, wi) => {
+            if (b.x > w.x && b.x < w.x + w.w && b.y > w.y && b.y < w.y + w.h) {
+                w.hp -= b.damage; bullets.splice(bi, 1);
+                if (w.hp <= 0) { 
+                    items.push({ x: w.x + w.w/2, y: w.y, type: Math.random() > 0.8 ? 'heart' : 'power' }); 
+                    walls.splice(wi, 1); 
+                }
+            }
+        });
+        enemies.forEach((e, ei) => {
+            if (Math.hypot(e.x - b.x, e.y - b.y) < e.size + b.size/1.5) {
+                e.hp -= b.damage; bullets.splice(bi, 1);
+                if (e.hp <= 0) { enemies.splice(ei, 1); score += 50; }
+            }
+        });
+        bosses.forEach((boss, bsi) => {
+            if (Math.hypot(boss.x - b.x, boss.y - b.y) < boss.size * 0.9) {
+                boss.hp -= b.damage; bullets.splice(bi, 1);
+                if (boss.hp <= 0) { 
+                    score += 10000; bosses.splice(bsi, 1); 
+                    playSound(150, 'square', 2, 0.5); 
+                    finishGame("MISSION CLEAR!", "#0cf"); 
+                }
+            }
+        });
+    });
+
+    items.forEach((it, ii) => {
+        it.y += 6.5;
+        if (Math.hypot(player.x - it.x, player.y - it.y) < player.size) {
+            if (it.type === 'heart') player.lives = Math.min(5, player.lives + 1);
+            else { 
+                player.weaponLv = Math.min(6, player.weaponLv + 1); 
+                player.bulletSize = Math.min(45, player.bulletSize + 4.5); 
+            }
+            items.splice(ii, 1); playSound(900, 'sine', 0.2, 0.1);
+        }
+    });
+
+    bullets = bullets.filter(b => b.y > -50);
+}
+
+function finishGame(msg, color) {
+    isPaused = true;
+    if (bossTimer) clearTimeout(bossTimer); // 종료 시에도 타이머 삭제
+    bossWarning.style.display = 'none';
+    if (score > hiScore) { hiScore = score; localStorage.setItem('swarmHiScore', hiScore); hiScoreDisplay.innerText = hiScore; }
+    menu.style.display = 'block';
+    menuTitle.innerText = msg;
+    menuTitle.style.color = color;
+    menuInfo.innerText = `최종 점수: ${score}`;
+    retryInfo.style.display = 'block';
+    document.querySelector('.start-btn').innerText = "다시 시작하기";
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    walls.forEach(w => { 
+        ctx.fillStyle = '#1a1a1a'; ctx.fillRect(w.x, w.y, w.w, w.h); 
+        ctx.strokeStyle = '#0cf'; ctx.lineWidth = 2; ctx.strokeRect(w.x, w.y, w.w, w.h); 
+    });
+    if (soldierImg.complete) ctx.drawImage(soldierImg, player.x-30, player.y-30, 60, 60);
+    enemies.forEach(e => { if (badImg.complete) ctx.drawImage(badImg, e.x-19, e.y-21, 38, 42); });
+    bosses.forEach(b => {
+        if (bossImg.complete) ctx.drawImage(bossImg, b.x-b.size, b.y-b.size, b.size*2, b.size*2);
+        ctx.fillStyle = '#111'; ctx.fillRect(b.x-100, b.y-b.size-30, 200, 15);
+        ctx.fillStyle = '#f0f'; ctx.fillRect(b.x-100, b.y-b.size-30, (b.hp/b.maxHp)*200, 15);
+        ctx.strokeStyle = '#fff'; ctx.strokeRect(b.x-100, b.y-b.size-30, 200, 15);
+    });
+    bullets.forEach(b => {
+        ctx.save(); ctx.fillStyle = b.color; ctx.shadowBlur = 15; ctx.shadowColor = b.color;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    });
+    items.forEach(it => {
+        ctx.fillStyle = it.type === 'heart' ? '#f44' : '#ff0'; ctx.beginPath(); ctx.arc(it.x, it.y, 15, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(it.type === 'heart'?'H':'P', it.x, it.y+4);
+    });
+}
+
+const handleMove = (e) => {
+    if (isPaused) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    player.x = Math.max(30, Math.min(canvas.width - 30, x * (canvas.width / rect.width)));
+};
+canvas.addEventListener('mousemove', handleMove);
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+
+function loop() { if(!isPaused) { update(); draw(); requestAnimationFrame(loop); } }
+
+resetGame();
+draw();
+</script>
+</body>
+</html>
