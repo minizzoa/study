@@ -2,100 +2,143 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>AI 주식 전략가 PRO - 가이드 포함</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stock AI Mobile</title>
     <style>
-        :root { --green: #00cf8d; --red: #ff4d4d; --bg: #121212; --card: #1e1e1e; --input-bg: #2a2a2a; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: #e0e0e0; padding: 20px; display: flex; justify-content: center; }
-        .container { background: var(--card); width: 100%; max-width: 500px; padding: 30px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center; }
+        :root { --green: #00cf8d; --red: #ff4d4d; --bg: #000000; --card: #1c1c1e; --input-bg: #2c2c2e; }
         
-        .api-counter { background: #333; padding: 8px 15px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 20px; color: #aaa; border: 1px solid #444; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); color: #ffffff; margin: 0; padding: 15px;
+            display: flex; justify-content: center;
+        }
+
+        .container { width: 100%; max-width: 480px; }
+
+        /* 상단 상태 바 */
+        .header-info { 
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 0 5px;
+        }
+        .api-counter { font-size: 12px; color: #8e8e93; }
         .api-counter span { color: var(--green); font-weight: bold; }
 
-        .top-stocks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
-        .stock-tab { background: var(--input-bg); border: 1px solid #444; padding: 10px 5px; border-radius: 8px; color: #ccc; font-size: 11px; cursor: pointer; transition: 0.2s; }
-        .stock-tab:hover { background: #3d3d3d; color: var(--green); border-color: var(--green); }
-        
-        input { width: 100%; padding: 15px; background: var(--input-bg); border: 1px solid #444; border-radius: 12px; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 16px; outline: none; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 15px; }
-        .btn-main { background: var(--green); color: #121212; flex: 1.5; }
-        .btn-refresh { background: #444; color: white; flex: 1; }
-        
-        .result-box { display: none; background: #262626; padding: 25px; border-radius: 18px; text-align: left; position: relative; border: 1px solid #333; margin-bottom: 20px; }
-        .cache-badge { position: absolute; top: 15px; right: 15px; font-size: 10px; color: #888; border: 1px solid #444; padding: 2px 8px; border-radius: 6px; }
-        .price-val { font-size: 36px; font-weight: bold; color: var(--green); margin: 10px 0; }
-        
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .grid-item { background: #333; padding: 15px; border-radius: 12px; }
-        
-        /* RSI 설명 가이드 섹션 */
-        .rsi-guide { background: #1a1a1a; padding: 20px; border-radius: 15px; text-align: left; font-size: 13px; border: 1px dashed #444; }
-        .rsi-guide h4 { margin: 0 0 10px 0; color: var(--green); font-size: 15px; }
-        .rsi-guide p { margin: 5px 0; color: #bbb; line-height: 1.5; }
-        .rsi-step { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        h2 { font-size: 24px; font-weight: 700; margin: 0 0 20px 0; letter-spacing: -0.5px; }
 
-        #status { font-size: 12px; color: #ffab00; margin-bottom: 15px; min-height: 18px; }
+        /* 종목 탭 - 모바일 가로 스크롤 대응 */
+        .top-stocks { 
+            display: flex; overflow-x: auto; gap: 8px; margin-bottom: 20px;
+            padding-bottom: 5px; -webkit-overflow-scrolling: touch;
+        }
+        .top-stocks::-webkit-scrollbar { display: none; }
+        .stock-tab { 
+            flex: 0 0 auto; background: var(--input-bg); border: none;
+            padding: 10px 16px; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 500;
+        }
+
+        /* 입력 및 버튼 */
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
+        input { 
+            width: 100%; height: 55px; background: var(--input-bg); border: none;
+            border-radius: 14px; color: white; padding: 0 20px; box-sizing: border-box;
+            font-size: 17px; outline: none;
+        }
+        .btn-group { display: flex; gap: 10px; }
+        button { 
+            height: 55px; border-radius: 14px; border: none; font-weight: 600; 
+            font-size: 16px; transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.97); }
+        .btn-main { background: var(--green); color: #000; flex: 2; }
+        .btn-refresh { background: #3a3a3c; color: #fff; flex: 1; }
+
+        /* 상태 메시지 */
+        #status { font-size: 13px; color: #ffd60a; margin: 15px 0; text-align: center; min-height: 18px; }
+
+        /* 결과 카드 */
+        .result-box { 
+            display: none; background: var(--card); padding: 25px; border-radius: 20px; 
+            margin-bottom: 20px; animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .cache-badge { float: right; font-size: 10px; color: #8e8e93; border: 1px solid #3a3a3c; padding: 3px 8px; border-radius: 5px; }
+        .price-val { font-size: 40px; font-weight: 800; margin: 15px 0 5px 0; color: #fff; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 25px; }
+        .grid-item { background: #2c2c2e; padding: 15px; border-radius: 15px; }
+        .grid-label { font-size: 12px; color: #8e8e93; margin-bottom: 6px; }
+        .grid-value { font-size: 18px; font-weight: 700; }
+
+        /* 가이드 */
+        .rsi-guide { 
+            background: #1c1c1e; padding: 20px; border-radius: 20px; 
+            font-size: 13px; color: #8e8e93; line-height: 1.6;
+        }
+        .rsi-guide h4 { color: #fff; margin: 0 0 12px 0; font-size: 15px; }
+        .guide-item { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="api-counter">무료 API 누적 호출: <span id="call-count">0</span> / 100회</div>
+    <div class="header-info">
+        <div class="api-counter">API 호출: <span id="call-count">0</span>회</div>
+        <div style="font-size: 12px; color:#8e8e93;">Cache: 3시간</div>
+    </div>
     
-    <h2>🎯 AI 타점 분석기 PRO</h2>
+    <h2>AI 주식 전략가</h2>
     
     <div class="top-stocks">
         <div class="stock-tab" onclick="quickSearch('005930.KS')">삼성전자</div>
-        <div class="stock-tab" onclick="quickSearch('000660.KS')">하이닉스</div>
-        <div class="stock-tab" onclick="quickSearch('373220.KS')">LG엔솔</div>
-        <div class="stock-tab" onclick="quickSearch('207940.KS')">삼바</div>
-        <div class="stock-tab" onclick="quickSearch('005380.KS')">현대차</div>
-        <div class="stock-tab" onclick="quickSearch('068270.KS')">셀트리온</div>
-        <div class="stock-tab" onclick="quickSearch('005490.KS')">포스코</div>
-        <div class="stock-tab" onclick="quickSearch('000270.KS')">기아</div>
+        <div class="stock-tab" onclick="quickSearch('000660.KS')">SK하이닉스</div>
         <div class="stock-tab" onclick="quickSearch('086520.KQ')">에코프로</div>
         <div class="stock-tab" onclick="quickSearch('247540.KQ')">에코BM</div>
+        <div class="stock-tab" onclick="quickSearch('373220.KS')">LG엔솔</div>
+        <div class="stock-tab" onclick="quickSearch('005380.KS')">현대차</div>
     </div>
 
-    <input type="text" id="symbol" placeholder="종목코드 입력 (예: 005930.KS)">
-    <div class="btn-group">
-        <button class="btn-main" onclick="analyze(false)">분석하기</button>
-        <button class="btn-refresh" onclick="analyze(true)">새로고침 🔄</button>
+    <div class="input-group">
+        <input type="text" id="symbol" placeholder="종목코드 입력 (예: 005930.KS)" inputmode="text">
+        <div class="btn-group">
+            <button class="btn-main" onclick="analyze(false)">분석하기</button>
+            <button class="btn-refresh" onclick="analyze(true)">🔄</button>
+        </div>
     </div>
 
     <div id="status"></div>
 
     <div id="result-box" class="result-box">
-        <div id="cache-info" class="cache-badge">LIVE</div>
-        <div id="res-name" style="color:#aaa; font-size:14px;">종목 정보</div>
+        <span id="cache-info" class="cache-badge">LIVE</span>
+        <div id="res-name" style="color:#8e8e93; font-size:14px; font-weight:500;">종목 정보</div>
         <div id="res-price" class="price-val">-</div>
-        <div style="font-size:14px;">현재 RSI: <span id="res-rsi" style="font-weight:bold;">-</span></div>
+        <div style="font-size:15px; font-weight: 500;">RSI 강도: <span id="res-rsi">-</span></div>
 
         <div class="grid">
-            <div class="grid-item" style="border-left: 4px solid var(--green);">
-                <div style="font-size:11px; color:#aaa; margin-bottom:5px;">추천 매수 타점</div>
-                <div id="buy-price" style="font-weight:bold; color:var(--green); font-size:18px;">-</div>
+            <div class="grid-item">
+                <div class="grid-label">추천 매수 타점</div>
+                <div id="buy-price" class="grid-value" style="color:var(--green);">-</div>
             </div>
-            <div class="grid-item" style="border-left: 4px solid var(--red);">
-                <div style="font-size:11px; color:#aaa; margin-bottom:5px;">단기 목표가</div>
-                <div id="sell-price" style="font-weight:bold; color:var(--red); font-size:18px;">-</div>
+            <div class="grid-item">
+                <div class="grid-label">단기 목표가</div>
+                <div id="sell-price" class="grid-value" style="color:var(--red);">-</div>
             </div>
         </div>
     </div>
 
     <div class="rsi-guide">
-        <h4>💡 RSI(상대강도지수)란?</h4>
-        <p>주가의 상승 압력과 하락 압력 간의 상대적 강도를 나타내는 지표입니다.</p>
-        <div class="rsi-step"><div class="dot" style="background:var(--red)"></div> <span><b>70 이상:</b> 과매수 (매도 검토 시점)</span></div>
-        <div class="rsi-step"><div class="dot" style="background:#888"></div> <span><b>50 부근:</b> 보통 (추세 관망)</span></div>
-        <div class="rsi-step"><div class="dot" style="background:var(--green)"></div> <span><b>30 이하:</b> 과매도 (매수 기회 구간)</span></div>
+        <h4>💡 모바일 투자 가이드</h4>
+        <div class="guide-item"><div class="dot" style="background:var(--red)"></div> 70↑ 과매수 (매도 검토)</div>
+        <div class="guide-item"><div class="dot" style="background:#8e8e93"></div> 50 내외 (추세 관망)</div>
+        <div class="guide-item"><div class="dot" style="background:var(--green)"></div> 30↓ 과매도 (적극 매수)</div>
+        <p style="margin-top:15px; font-size:11px;">* 본 데이터는 3시간 동안 유지되어 데이터 소모를 방지합니다.</p>
     </div>
 </div>
 
 <script>
-const CACHE_TIME = 5 * 60 * 1000; 
-const apiKey = '91ddc9b5afmshdcc42e8dbcb14ecp14535bjsn920f0dd4979d'; // ⚠️ 여기에 본인의 RapidAPI 키를 입력하세요!
+const CACHE_TIME = 3 * 60 * 60 * 1000; // 3시간
+const apiKey = '91ddc9b5afmshdcc42e8dbcb14ecp14535bjsn920f0dd4979d'; // ⚠️ RapidAPI 키 입력
 
 let callCount = localStorage.getItem('api_call_count') || 0;
 document.getElementById('call-count').innerText = callCount;
@@ -116,7 +159,7 @@ async function analyze(isRefresh) {
     const status = document.getElementById('status');
     const resultBox = document.getElementById('result-box');
 
-    if(!symbol) return alert("종목코드를 입력하세요.");
+    if(!symbol) return;
 
     const cachedData = localStorage.getItem('cache_' + symbol);
     const now = new Date().getTime();
@@ -125,27 +168,27 @@ async function analyze(isRefresh) {
         const parsed = JSON.parse(cachedData);
         if (now - parsed.timestamp < CACHE_TIME) {
             displayData(parsed.data, symbol, true);
-            status.innerText = "💡 5분 내 조회 데이터(캐시)를 표시합니다.";
+            status.innerText = "⚡ 3시간 내 조회된 캐시 데이터를 불러왔습니다.";
             return;
         }
     }
 
-    status.innerText = "🚀 최신 데이터를 가져오는 중...";
+    status.innerText = "📡 실시간 데이터 분석 중...";
     try {
         const url = `https://yh-finance.p.rapidapi.com/stock/v3/get-chart?interval=1d&symbol=${symbol}&range=1mo&region=KR`;
         const res = await fetch(url, { headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'yh-finance.p.rapidapi.com' } });
         const json = await res.json();
         
-        if (!json.chart.result) throw new Error("종목 정보를 찾을 수 없습니다.");
+        if (!json.chart.result) throw new Error("종목 없음");
         const data = json.chart.result[0];
 
         updateCallCount();
         localStorage.setItem('cache_' + symbol, JSON.stringify({ timestamp: now, data: data }));
 
         displayData(data, symbol, false);
-        status.innerText = "✅ 최신 데이터 분석 완료";
+        status.innerText = "✅ 분석 완료";
     } catch (e) {
-        status.innerText = "❌ 에러: 종목코드 또는 API 키를 확인하세요.";
+        status.innerText = "❌ 정보를 찾을 수 없습니다.";
     }
 }
 
@@ -160,18 +203,19 @@ function displayData(data, symbol, fromCache) {
     }
     const rsi = 100 - (100 / (1 + (gains / Math.abs(losses || 1))));
 
-    document.getElementById('res-name').innerText = symbol + " 분석 결과";
+    document.getElementById('res-name').innerText = symbol;
     document.getElementById('res-price').innerText = currentPrice.toLocaleString() + " " + (data.meta.currency || 'KRW');
     
     const rsiElem = document.getElementById('res-rsi');
     rsiElem.innerText = rsi.toFixed(2);
-    rsiElem.style.color = rsi >= 70 ? 'var(--red)' : (rsi <= 30 ? 'var(--green)' : 'white');
+    rsiElem.style.color = rsi >= 70 ? 'var(--red)' : (rsi <= 30 ? 'var(--green)' : '#fff');
 
     document.getElementById('buy-price').innerText = Math.round(currentPrice * 0.96).toLocaleString();
     document.getElementById('sell-price').innerText = Math.round(currentPrice * 1.07).toLocaleString();
     document.getElementById('cache-info').innerText = fromCache ? "CACHED" : "LIVE";
     
     document.getElementById('result-box').style.display = 'block';
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 </script>
 
