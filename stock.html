@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 주식 전략가 PRO - 가이드 포함</title>
+    <style>
+        :root { --green: #00cf8d; --red: #ff4d4d; --bg: #121212; --card: #1e1e1e; --input-bg: #2a2a2a; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: #e0e0e0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: var(--card); width: 100%; max-width: 500px; padding: 30px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center; }
+        
+        .api-counter { background: #333; padding: 8px 15px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 20px; color: #aaa; border: 1px solid #444; }
+        .api-counter span { color: var(--green); font-weight: bold; }
+
+        .top-stocks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+        .stock-tab { background: var(--input-bg); border: 1px solid #444; padding: 10px 5px; border-radius: 8px; color: #ccc; font-size: 11px; cursor: pointer; transition: 0.2s; }
+        .stock-tab:hover { background: #3d3d3d; color: var(--green); border-color: var(--green); }
+        
+        input { width: 100%; padding: 15px; background: var(--input-bg); border: 1px solid #444; border-radius: 12px; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 16px; outline: none; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 15px; }
+        .btn-main { background: var(--green); color: #121212; flex: 1.5; }
+        .btn-refresh { background: #444; color: white; flex: 1; }
+        
+        .result-box { display: none; background: #262626; padding: 25px; border-radius: 18px; text-align: left; position: relative; border: 1px solid #333; margin-bottom: 20px; }
+        .cache-badge { position: absolute; top: 15px; right: 15px; font-size: 10px; color: #888; border: 1px solid #444; padding: 2px 8px; border-radius: 6px; }
+        .price-val { font-size: 36px; font-weight: bold; color: var(--green); margin: 10px 0; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .grid-item { background: #333; padding: 15px; border-radius: 12px; }
+        
+        /* RSI 설명 가이드 섹션 */
+        .rsi-guide { background: #1a1a1a; padding: 20px; border-radius: 15px; text-align: left; font-size: 13px; border: 1px dashed #444; }
+        .rsi-guide h4 { margin: 0 0 10px 0; color: var(--green); font-size: 15px; }
+        .rsi-guide p { margin: 5px 0; color: #bbb; line-height: 1.5; }
+        .rsi-step { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        #status { font-size: 12px; color: #ffab00; margin-bottom: 15px; min-height: 18px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="api-counter">무료 API 누적 호출: <span id="call-count">0</span> / 100회</div>
+    
+    <h2>🎯 AI 타점 분석기 PRO</h2>
+    
+    <div class="top-stocks">
+        <div class="stock-tab" onclick="quickSearch('005930.KS')">삼성전자</div>
+        <div class="stock-tab" onclick="quickSearch('000660.KS')">하이닉스</div>
+        <div class="stock-tab" onclick="quickSearch('373220.KS')">LG엔솔</div>
+        <div class="stock-tab" onclick="quickSearch('207940.KS')">삼바</div>
+        <div class="stock-tab" onclick="quickSearch('005380.KS')">현대차</div>
+        <div class="stock-tab" onclick="quickSearch('068270.KS')">셀트리온</div>
+        <div class="stock-tab" onclick="quickSearch('005490.KS')">포스코</div>
+        <div class="stock-tab" onclick="quickSearch('000270.KS')">기아</div>
+        <div class="stock-tab" onclick="quickSearch('086520.KQ')">에코프로</div>
+        <div class="stock-tab" onclick="quickSearch('247540.KQ')">에코BM</div>
+    </div>
+
+    <input type="text" id="symbol" placeholder="종목코드 입력 (예: 005930.KS)">
+    <div class="btn-group">
+        <button class="btn-main" onclick="analyze(false)">분석하기</button>
+        <button class="btn-refresh" onclick="analyze(true)">새로고침 🔄</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div id="result-box" class="result-box">
+        <div id="cache-info" class="cache-badge">LIVE</div>
+        <div id="res-name" style="color:#aaa; font-size:14px;">종목 정보</div>
+        <div id="res-price" class="price-val">-</div>
+        <div style="font-size:14px;">현재 RSI: <span id="res-rsi" style="font-weight:bold;">-</span></div>
+
+        <div class="grid">
+            <div class="grid-item" style="border-left: 4px solid var(--green);">
+                <div style="font-size:11px; color:#aaa; margin-bottom:5px;">추천 매수 타점</div>
+                <div id="buy-price" style="font-weight:bold; color:var(--green); font-size:18px;">-</div>
+            </div>
+            <div class="grid-item" style="border-left: 4px solid var(--red);">
+                <div style="font-size:11px; color:#aaa; margin-bottom:5px;">단기 목표가</div>
+                <div id="sell-price" style="font-weight:bold; color:var(--red); font-size:18px;">-</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rsi-guide">
+        <h4>💡 RSI(상대강도지수)란?</h4>
+        <p>주가의 상승 압력과 하락 압력 간의 상대적 강도를 나타내는 지표입니다.</p>
+        <div class="rsi-step"><div class="dot" style="background:var(--red)"></div> <span><b>70 이상:</b> 과매수 (매도 검토 시점)</span></div>
+        <div class="rsi-step"><div class="dot" style="background:#888"></div> <span><b>50 부근:</b> 보통 (추세 관망)</span></div>
+        <div class="rsi-step"><div class="dot" style="background:var(--green)"></div> <span><b>30 이하:</b> 과매도 (매수 기회 구간)</span></div>
+    </div>
+</div>
+
+<script>
+const CACHE_TIME = 5 * 60 * 1000; 
+const apiKey = '91ddc9b5afmshdcc42e8dbcb14ecp14535bjsn920f0dd4979d'; // ⚠️ 여기에 본인의 RapidAPI 키를 입력하세요!
+
+let callCount = localStorage.getItem('api_call_count') || 0;
+document.getElementById('call-count').innerText = callCount;
+
+function quickSearch(code) {
+    document.getElementById('symbol').value = code;
+    analyze(false);
+}
+
+function updateCallCount() {
+    callCount++;
+    localStorage.setItem('api_call_count', callCount);
+    document.getElementById('call-count').innerText = callCount;
+}
+
+async function analyze(isRefresh) {
+    const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+    const status = document.getElementById('status');
+    const resultBox = document.getElementById('result-box');
+
+    if(!symbol) return alert("종목코드를 입력하세요.");
+
+    const cachedData = localStorage.getItem('cache_' + symbol);
+    const now = new Date().getTime();
+
+    if (!isRefresh && cachedData) {
+        const parsed = JSON.parse(cachedData);
+        if (now - parsed.timestamp < CACHE_TIME) {
+            displayData(parsed.data, symbol, true);
+            status.innerText = "💡 5분 내 조회 데이터(캐시)를 표시합니다.";
+            return;
+        }
+    }
+
+    status.innerText = "🚀 최신 데이터를 가져오는 중...";
+    try {
+        const url = `https://yh-finance.p.rapidapi.com/stock/v3/get-chart?interval=1d&symbol=${symbol}&range=1mo&region=KR`;
+        const res = await fetch(url, { headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'yh-finance.p.rapidapi.com' } });
+        const json = await res.json();
+        
+        if (!json.chart.result) throw new Error("종목 정보를 찾을 수 없습니다.");
+        const data = json.chart.result[0];
+
+        updateCallCount();
+        localStorage.setItem('cache_' + symbol, JSON.stringify({ timestamp: now, data: data }));
+
+        displayData(data, symbol, false);
+        status.innerText = "✅ 최신 데이터 분석 완료";
+    } catch (e) {
+        status.innerText = "❌ 에러: 종목코드 또는 API 키를 확인하세요.";
+    }
+}
+
+function displayData(data, symbol, fromCache) {
+    const currentPrice = data.meta.regularMarketPrice;
+    const closes = data.indicators.quote[0].close.filter(p => p != null).reverse();
+    
+    let gains = 0, losses = 0;
+    for (let i = 0; i < 14; i++) {
+        let diff = closes[i] - closes[i+1];
+        if (diff > 0) gains += diff; else losses -= diff;
+    }
+    const rsi = 100 - (100 / (1 + (gains / Math.abs(losses || 1))));
+
+    document.getElementById('res-name').innerText = symbol + " 분석 결과";
+    document.getElementById('res-price').innerText = currentPrice.toLocaleString() + " " + (data.meta.currency || 'KRW');
+    
+    const rsiElem = document.getElementById('res-rsi');
+    rsiElem.innerText = rsi.toFixed(2);
+    rsiElem.style.color = rsi >= 70 ? 'var(--red)' : (rsi <= 30 ? 'var(--green)' : 'white');
+
+    document.getElementById('buy-price').innerText = Math.round(currentPrice * 0.96).toLocaleString();
+    document.getElementById('sell-price').innerText = Math.round(currentPrice * 1.07).toLocaleString();
+    document.getElementById('cache-info').innerText = fromCache ? "CACHED" : "LIVE";
+    
+    document.getElementById('result-box').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
