@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stock Profit Pro - Fees Included</title>
+    <style>
+        :root { --green: #00cf8d; --red: #ff4d4d; --bg: #000000; --card: #1c1c1e; --input-bg: #2c2c2e; --accent: #007aff; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: var(--bg); color: #ffffff; margin: 0; padding: 15px;
+            display: flex; justify-content: center;
+        }
+
+        .container { width: 100%; max-width: 480px; }
+        h2 { font-size: 22px; font-weight: 700; margin: 10px 0 20px 0; text-align: center; color: var(--green); }
+
+        .calc-card {
+            background: var(--card); padding: 20px; border-radius: 20px;
+            border: 1px solid #333;
+        }
+
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; color: #8e8e93; margin-bottom: 6px; margin-left: 5px; }
+        
+        input { 
+            width: 100%; height: 50px; background: var(--input-bg); border: 1px solid #444;
+            border-radius: 12px; color: white; padding: 0 12px; box-sizing: border-box;
+            font-size: 16px; font-weight: 600; outline: none;
+        }
+        input:focus { border-color: var(--green); }
+
+        /* 결과 영역 */
+        .result-section { 
+            margin-top: 20px; padding-top: 20px; border-top: 1px dotted #444;
+            display: none; animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .profit-header { text-align: center; margin-bottom: 20px; }
+        .profit-pct { font-size: 18px; font-weight: 800; margin: 5px 0; }
+        .profit-amt { font-size: 36px; font-weight: 600; }
+
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .summary-item { background: #262629; padding: 12px; border-radius: 12px; border: 1px solid #333; }
+        .summary-label { font-size: 11px; color: #8e8e93; margin-bottom: 4px; }
+        .summary-value { font-size: 14px; font-weight: 600; }
+
+        .fee-info {
+            background: #151517; padding: 15px; border-radius: 12px;
+            font-size: 11px; color: #777; line-height: 1.6; margin-top: 20px;
+        }
+        .fee-info strong { color: #aaa; }
+
+        .up { color: var(--red); }
+        .down { color: var(--accent); }
+        .neutral { color: #fff; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>실전 수익률 계산기</h2>
+
+    <div class="calc-card">
+        <div class="input-grid">
+            <div class="input-group">
+                <label>매수가 (₩)</label>
+                <input type="number" id="buyPrice" placeholder="0" oninput="calculate()">
+            </div>
+            <div class="input-group">
+                <label>수량 (주)</label>
+                <input type="number" id="quantity" placeholder="0" oninput="calculate()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>현재가/매도가 (₩)</label>
+            <input type="number" id="currentPrice" placeholder="0" oninput="calculate()">
+        </div>
+
+        <div class="input-grid">
+            <div class="input-group">
+                <label>매매 수수료 (%)</label>
+                <input type="number" id="feeRate" value="0.015" step="0.001" oninput="calculate()">
+            </div>
+            <div class="input-group">
+                <label>매도 세금 (%)</label>
+                <input type="number" id="taxRate" value="0.18" step="0.01" oninput="calculate()">
+            </div>
+        </div>
+
+        <div id="resultArea" class="result-section">
+            <div class="profit-header">
+                <div class="summary-label" style="font-size: 14px;">순수익률 (비용 차감 후)</div>
+        	<div id="resAmt" class="profit-amt">0원</div>               
+ 		<div id="resPct" class="profit-pct">0.00%</div>          
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">총 매수비용(수수료 포함)</div>
+                    <div id="totalBuy" class="summary-value">0원</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">실제 수령액(세금 포함)</div>
+                    <div id="totalEval" class="summary-value">0원</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">매수 수수료</div>
+                    <div id="buyFee" class="summary-value" style="color:#8e8e93;">0원</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">매도 수수료+세금</div>
+                    <div id="sellFeeTax" class="summary-value" style="color:#8e8e93;">0원</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fee-info">
+            <strong>📊 계산 공식 안내</strong><br>
+            • <b>매수 비용</b> = (단가 × 수량) + 매수 수수료<br>
+            • <b>매수 수수료</b> = 단가 × 수량 × 매매수수료(%)<br>
+            • <b>실제 수령액</b> = (단가 × 수량) - 매도 수수료 - 매도 세금<br>
+            • <b>매도 비용</b> = (단가 × 수량 × 매매수수료(%)) + (단가 × 수량 × 세금(%))
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        const buyPrice = parseFloat(document.getElementById('buyPrice').value) || 0;
+        const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+        const currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+        const feeRate = (parseFloat(document.getElementById('feeRate').value) || 0) / 100;
+        const taxRate = (parseFloat(document.getElementById('taxRate').value) || 0) / 100;
+        
+        const resultArea = document.getElementById('resultArea');
+
+        if (buyPrice > 0 && quantity > 0 && currentPrice > 0) {
+            resultArea.style.display = 'block';
+
+            // 1. 매수 시 계산
+            const pureBuyAmt = buyPrice * quantity;
+            const buyFee = pureBuyAmt * feeRate;
+            const totalBuyCost = pureBuyAmt + buyFee; // 내 주머니에서 나간 총액
+
+            // 2. 매도 시 계산
+            const pureSellAmt = currentPrice * quantity;
+            const sellFee = pureSellAmt * feeRate;
+            const sellTax = pureSellAmt * taxRate;
+            const totalSellFees = sellFee + sellTax;
+            const realReceiveAmt = pureSellAmt - totalSellFees; // 내 통장에 들어올 순액
+
+            // 3. 최종 수익 계산
+            const netProfit = realReceiveAmt - totalBuyCost;
+            const netProfitPct = (netProfit / totalBuyCost) * 100;
+
+            // 결과 업데이트
+            document.getElementById('totalBuy').innerText = Math.round(totalBuyCost).toLocaleString() + "원";
+            document.getElementById('totalEval').innerText = Math.round(realReceiveAmt).toLocaleString() + "원";
+            document.getElementById('buyFee').innerText = Math.round(buyFee).toLocaleString() + "원";
+            document.getElementById('sellFeeTax').innerText = Math.round(totalSellFees).toLocaleString() + "원";
+            
+            document.getElementById('resAmt').innerText = (netProfit > 0 ? "+" : "") + Math.round(netProfit).toLocaleString() + "원";
+            document.getElementById('resPct').innerText = (netProfit > 0 ? "+" : "") + netProfitPct.toFixed(2) + "%";
+
+            // 색상 변경
+            const resPctElem = document.getElementById('resPct');
+            const resAmtElem = document.getElementById('resAmt');
+            if (netProfit > 0) {
+                resPctElem.className = 'profit-pct up'; resAmtElem.className = 'profit-amt up';
+            } else if (netProfit < 0) {
+                resPctElem.className = 'profit-pct down'; resAmtElem.className = 'profit-amt down';
+            } else {
+                resPctElem.className = 'profit-pct neutral'; resAmtElem.className = 'profit-amt neutral';
+            }
+        } else {
+            resultArea.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
